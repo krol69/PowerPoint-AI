@@ -1,0 +1,230 @@
+═══════════════════════════════════════════════════════════════
+  CROSS-DIVISIONAL PROJECT DATABASE - QUICK START GUIDE
+═══════════════════════════════════════════════════════════════
+
+⏱️ Total Time: 60-75 minutes
+📋 Prerequisites: Power Apps Premium license, Dataverse environment
+
+═══════════════════════════════════════════════════════════════
+STEP 1: GENERATE .MSAPP FILE (2 minutes)
+═══════════════════════════════════════════════════════════════
+
+The package contains source files that need to be compiled first.
+
+Windows (double-click or command line):
+  → Run: RepackToolkit\repack.cmd
+  → Wait for "REPACK COMPLETED SUCCESSFULLY"
+  → Output: CanvasApp\CrossDivProjectDB.msapp
+
+PowerShell:
+  → Run: .\RepackToolkit\repack.ps1
+
+═══════════════════════════════════════════════════════════════
+STEP 2: IMPORT INTO POWER APPS (3 minutes)
+═══════════════════════════════════════════════════════════════
+
+1. Go to: https://make.powerapps.com
+2. Select your environment (top-right)
+3. Click: Apps → Import canvas app
+4. Upload: CanvasApp\CrossDivProjectDB.msapp
+5. Click: Import
+6. Wait for import to complete
+
+═══════════════════════════════════════════════════════════════
+STEP 3: CREATE DATAVERSE TABLES (20 minutes)
+═══════════════════════════════════════════════════════════════
+
+📖 Reference: Docs\DATAVERSE_SCHEMA.md
+
+Create these 8 tables (in order):
+
+  1. ✓ Security Features       (4 columns)
+  2. ✓ App Configuration        (4 columns)
+  3. ✓ Submissions              (11 columns)
+  4. ✓ Projects                 (25 columns) → Lookup to Submissions
+  5. ✓ Project Security Details (6 columns)  → Lookup to Projects + Security Features
+  6. ✓ Project Documents        (5 columns)  → Lookup to Projects
+  7. ✓ Support Tickets          (7 columns)
+  8. ✓ Ticket Messages          (5 columns)  → Lookup to Support Tickets
+
+❗ Important: Use exact Display Names from the schema document.
+❗ Add choice values to dropdown columns (Customer, Status, etc.)
+
+═══════════════════════════════════════════════════════════════
+STEP 4: IMPORT SEED DATA (5 minutes)
+═══════════════════════════════════════════════════════════════
+
+Import CSV files into Dataverse:
+
+  1. Security Features table ← SeedData\Seed_SecurityFeatures.csv
+     (22 pre-defined security features)
+
+  2. App Configuration table ← SeedData\Seed_AppConfig.csv
+     (5 configuration settings)
+
+How to import:
+  → Go to: Tables → [Table Name] → Import → Import data
+  → Upload CSV file
+  → Map columns
+  → Click Import
+
+═══════════════════════════════════════════════════════════════
+STEP 5: CONNECT DATA SOURCES (10 minutes)
+═══════════════════════════════════════════════════════════════
+
+1. Open app in Power Apps Studio:
+   → Apps → Cross-Divisional Project Database → Edit
+
+2. Add data sources:
+   → Left panel → Data (database icon)
+   → Click: + Add data
+   → Search and add each table:
+      ✓ Submissions
+      ✓ Projects
+      ✓ Project Security Details
+      ✓ Project Documents
+      ✓ Security Features
+      ✓ Support Tickets
+      ✓ Ticket Messages
+      ✓ App Configuration
+
+3. Verify:
+   → All 8 tables appear in Data panel
+   → No warning icons
+
+❗ If tables don't appear: See Docs\TABLE_NAME_MAPPING_GUIDE.md
+
+═══════════════════════════════════════════════════════════════
+STEP 6: CONFIGURE PLACEHOLDERS (5 minutes)
+═══════════════════════════════════════════════════════════════
+
+⚠️ CRITICAL: Update these 3 placeholders before using the app
+
+1. In Power Apps Studio, select: App object (top of tree view)
+
+2. Find OnStart property in formula bar
+
+3. Update these values in gblConfig:
+
+   AdminEmail: "<<CHANGE_ADMIN_EMAIL>>"
+   → Change to: "your.admin@company.com"
+
+   AdminEmailCC: ""
+   → Optional: "team@company.com,manager@company.com"
+
+   SharePointFolderURL: "<<CHANGE_SHAREPOINT_FOLDER_URL>>"
+   → Change to: "https://yourcompany.sharepoint.com/sites/Site/Folder"
+
+4. Save the app (Ctrl+S or File → Save)
+
+═══════════════════════════════════════════════════════════════
+STEP 7: ADD EMAIL CONNECTOR (2 minutes)
+═══════════════════════════════════════════════════════════════
+
+For email notifications to work:
+
+1. In Power Apps Studio → Data panel
+2. Click: + Add data → Connectors
+3. Search: Office 365 Outlook
+4. Click: Add
+5. Sign in with your organizational account
+
+═══════════════════════════════════════════════════════════════
+STEP 8: TEST THE APP (15 minutes)
+═══════════════════════════════════════════════════════════════
+
+1. Preview the app (F5)
+
+2. Create test submission:
+   ✓ Click: New Submission
+   ✓ Add a project
+   ✓ Fill all 4 wizard steps
+   ✓ Verify validation works (try submitting incomplete data)
+   ✓ Save and exit
+
+3. Test features:
+   ✓ Clone project (should copy fields + security features)
+   ✓ Wait 90 seconds (autosave notification should appear)
+   ✓ Add 5 projects (6th should be blocked)
+   ✓ Select protocols: Try "Other" → verify text field required
+   ✓ Select security features → verify SpecVersion + SpecDetails required
+
+4. Submit:
+   ✓ Complete all projects
+   ✓ Click: Review & Submit
+   ✓ Click: Submit Submission
+   ✓ Check admin email inbox for notification
+
+═══════════════════════════════════════════════════════════════
+STEP 9: SHARE WITH USERS (3 minutes)
+═══════════════════════════════════════════════════════════════
+
+1. Go to: https://make.powerapps.com → Apps
+
+2. Find app → Click ⋮ (more actions) → Share
+
+3. Add users or groups
+
+4. Set permissions:
+   → "Can use" (for regular users)
+   → "Can use and share" (for admins)
+
+5. Click: Share
+
+❗ Users also need Dataverse table permissions:
+   → Tables → [Table Name] → Manage permissions
+   → Add users with Read + Write access
+
+═══════════════════════════════════════════════════════════════
+✅ SETUP COMPLETE!
+═══════════════════════════════════════════════════════════════
+
+Your app is ready for production use.
+
+📖 Next Steps:
+
+  • Train users on the app workflow
+  • Monitor submissions via Admin Dashboard
+  • Review Docs\POST_IMPORT_CHECKLIST.md for advanced features
+  • Customize theme: Docs\THEME_DOCUMENTATION.md
+
+═══════════════════════════════════════════════════════════════
+🆘 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+Issue: "Error opening file" when importing .msapp
+→ Solution: Run RepackToolkit\repack.cmd to generate the file
+
+Issue: Tables don't appear in Add Data panel
+→ Solution: Check table ownership, refresh data sources
+→ See: Docs\TABLE_NAME_MAPPING_GUIDE.md
+
+Issue: Dropdowns are empty (Customer, Microcontroller, etc.)
+→ Solution: Add choice values to table columns
+→ See: Docs\DATAVERSE_SCHEMA.md
+
+Issue: Email not sending
+→ Solution: Verify Office 365 Outlook connector added
+→ Check admin email placeholder updated
+
+Issue: Placeholders still showing <<CHANGE_...>>
+→ Solution: Edit App.fx.yaml → OnStart → gblConfig
+→ Save app and preview (F5) to run OnStart
+
+═══════════════════════════════════════════════════════════════
+📚 DOCUMENTATION
+═══════════════════════════════════════════════════════════════
+
+README.md                          Package overview
+RepackToolkit\README_REPACK.md     Repack instructions
+Docs\POST_IMPORT_CHECKLIST.md      Complete setup guide
+Docs\DATAVERSE_SCHEMA.md           Table schemas
+Docs\TABLE_NAME_MAPPING_GUIDE.md   Table connection help
+Docs\THEME_DOCUMENTATION.md        Customize colors
+Docs\REPACK_PIPELINE.md            Modify & repack
+
+═══════════════════════════════════════════════════════════════
+
+Questions? See README.md or Docs\POST_IMPORT_CHECKLIST.md
+
+Version 2.1 | 2025-12-21 | Power Apps + Dataverse

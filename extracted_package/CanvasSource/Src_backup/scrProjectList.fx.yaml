@@ -1,0 +1,452 @@
+scrProjectList As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =// Refresh projects collection
+        ClearCollect(colCurrentProjects,
+            Sort(
+                Filter(Projects, SubmissionId.SubmissionId = gblCurrentSubmission.SubmissionId),
+                ProjectIndex,
+                SortOrder.Ascending
+            )
+        );
+        // Update submission tracking
+        Patch(
+            Submissions,
+            gblCurrentSubmission,
+            { LastVisitedScreen: "scrProjectList", LastSavedOn: Now() }
+        );
+        // Calculate metrics
+        Set(gblSubmissionMetrics, {
+            TotalProjects: CountRows(colCurrentProjects),
+            CompleteProjects: CountRows(Filter(colCurrentProjects, CompletionStatus.Value = "Complete")),
+            TotalFeatures: Sum(colCurrentProjects, SelectedFeatureCount),
+            TotalMissing: Sum(colCurrentProjects, MissingSpecCount)
+        })
+    
+    // ═══════════════════════════════════════════════════════════════
+    // AUTOSAVE TIMER
+    // ═══════════════════════════════════════════════════════════════
+    tmrAutosave As timer:
+        Duration: =gblConfig.AutosaveInterval
+        Repeat: =true
+        AutoStart: =true
+        OnTimerEnd: |-
+            =Patch(Submissions, gblCurrentSubmission, { LastSavedOn: Now() });
+            Set(gblToastMessage, "Auto-saved");
+            Set(gblShowToast, true)
+    
+    // ═══════════════════════════════════════════════════════════════
+    // HEADER
+    // ═══════════════════════════════════════════════════════════════
+    rectAccentTop As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Primary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    lblAppTitle As label:
+        X: =30
+        Y: =15
+        Width: =350
+        Height: =28
+        Text: ="Cross-Divisional Project Database"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+    
+    lblSubmissionId As label:
+        X: =30
+        Y: =42
+        Width: =250
+        Height: =20
+        Text: ="Submission Draft #" & gblCurrentSubmission.SubmissionId
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+    
+    btnSaveDraft As button:
+        X: =Parent.Width - 400
+        Y: =18
+        Width: =110
+        Height: =36
+        Text: ="💾 Save"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: |-
+            =Patch(Submissions, gblCurrentSubmission, { LastSavedOn: Now() });
+            Notify("Draft saved", NotificationType.Success)
+    
+    btnExit As button:
+        X: =Parent.Width - 280
+        Y: =18
+        Width: =80
+        Height: =36
+        Text: ="Exit"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: |-
+            =Patch(Submissions, gblCurrentSubmission, { LastSavedOn: Now() });
+            Navigate(scrHome, ScreenTransition.Fade)
+    
+    btnSubmitReview As button:
+        X: =Parent.Width - 185
+        Y: =18
+        Width: =155
+        Height: =36
+        Text: ="Review & Submit →"
+        Fill: =If(
+            gblSubmissionMetrics.TotalProjects > 0 && 
+            gblSubmissionMetrics.CompleteProjects = gblSubmissionMetrics.TotalProjects,
+            gblTheme.Success,
+            gblTheme.BackgroundCard
+        )
+        Color: =If(
+            gblSubmissionMetrics.TotalProjects > 0 && 
+            gblSubmissionMetrics.CompleteProjects = gblSubmissionMetrics.TotalProjects,
+            gblTheme.TextOnPrimary,
+            gblTheme.TextMuted
+        )
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =12
+        BorderRadius: =8
+        DisplayMode: =If(
+            gblSubmissionMetrics.TotalProjects > 0 && 
+            gblSubmissionMetrics.CompleteProjects = gblSubmissionMetrics.TotalProjects,
+            DisplayMode.Edit,
+            DisplayMode.Disabled
+        )
+        OnSelect: =Navigate(scrSubmissionReview, ScreenTransition.Fade)
+    
+    // ═══════════════════════════════════════════════════════════════
+    // LEFT COLUMN - PROJECT CARDS
+    // ═══════════════════════════════════════════════════════════════
+    lblProjectsTitle As label:
+        X: =30
+        Y: =95
+        Width: =200
+        Height: =30
+        Text: ="Your Projects"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+    
+    galProjects As gallery:
+        Items: =colCurrentProjects
+        X: =30
+        Y: =135
+        Width: =Parent.Width * 0.62
+        Height: =Parent.Height - 185
+        TemplateFill: =Transparent
+        TemplateSize: =140
+        TemplatePadding: =10
+        
+        rectCard As rectangle:
+            X: =0
+            Y: =0
+            Width: =Parent.TemplateWidth - 20
+            Height: =130
+            Fill: =gblTheme.BackgroundCard
+            BorderColor: =If(ThisItem.CompletionStatus.Value = "Complete", gblTheme.Success, If(ThisItem.MissingRequiredCount > 0, gblTheme.Warning, gblTheme.Border))
+            BorderThickness: =2
+            BorderRadius: =12
+        
+        lblProjectNum As label:
+            Text: ="Project " & ThisItem.ProjectIndex & ":"
+            X: =15
+            Y: =12
+            Width: =80
+            Height: =22
+            Color: =gblTheme.Primary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Size: =13
+        
+        lblProjectName As label:
+            Text: =If(IsBlank(ThisItem.ProjectName), "Unnamed Project", ThisItem.ProjectName)
+            X: =100
+            Y: =12
+            Width: =Parent.TemplateWidth - 280
+            Height: =22
+            Color: =gblTheme.TextPrimary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =13
+        
+        rectStatusBadge As rectangle:
+            X: =Parent.TemplateWidth - 160
+            Y: =10
+            Width: =120
+            Height: =26
+            Fill: =Switch(ThisItem.CompletionStatus.Value, "Complete", RGBA(0, 230, 118, 0.15), "In Progress", RGBA(255, 193, 7, 0.15), RGBA(110, 118, 129, 0.15))
+            BorderRadius: =13
+        
+        lblStatusBadge As label:
+            Text: =ThisItem.CompletionStatus.Value
+            X: =Parent.TemplateWidth - 155
+            Y: =12
+            Width: =110
+            Height: =22
+            Color: =Switch(ThisItem.CompletionStatus.Value, "Complete", gblTheme.Success, "In Progress", gblTheme.Warning, gblTheme.TextMuted)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =10
+            Align: =Align.Center
+        
+        lblMetrics As label:
+            Text: =If(ThisItem.Customer.Value = "Other", ThisItem.CustomerOther, Coalesce(ThisItem.Customer.Value, "—")) & " • " & ThisItem.SelectedFeatureCount & " features"
+            X: =15
+            Y: =45
+            Width: =Parent.TemplateWidth - 50
+            Height: =20
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =11
+        
+        lblWarning As label:
+            Text: ="⚠ Missing " & ThisItem.MissingRequiredCount & " required field(s)"
+            X: =15
+            Y: =70
+            Width: =300
+            Height: =20
+            Color: =gblTheme.Error
+            Font: =Font.'Segoe UI'
+            Size: =11
+            Visible: =ThisItem.MissingRequiredCount > 0
+        
+        btnEdit As button:
+            Text: ="✏ Edit"
+            X: =15
+            Y: =95
+            Width: =80
+            Height: =28
+            Fill: =gblTheme.Primary
+            Color: =gblTheme.TextOnPrimary
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnSelect: |-
+                =Set(gblCurrentProject, ThisItem);
+                Set(gblCurrentProjectIndex, ThisItem.ProjectIndex);
+                Navigate(scrWizardStep1, ScreenTransition.Fade)
+        
+        btnClone As button:
+            Text: ="📋 Clone"
+            X: =105
+            Y: =95
+            Width: =80
+            Height: =28
+            Fill: =gblTheme.BackgroundSecondary
+            Color: =gblTheme.TextPrimary
+            BorderColor: =gblTheme.Border
+            BorderThickness: =1
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            DisplayMode: =If(CountRows(colCurrentProjects) >= gblConfig.MaxProjects, DisplayMode.Disabled, DisplayMode.Edit)
+            OnSelect: |-
+                =// Clone project
+                Set(gblClonedProject,
+                    Patch(Projects, Defaults(Projects), {
+                        SubmissionId: gblCurrentSubmission,
+                        ProjectIndex: CountRows(colCurrentProjects) + 1,
+                        ProjectName: "Copy of " & ThisItem.ProjectName,
+                        Customer: ThisItem.Customer,
+                        CustomerOther: ThisItem.CustomerOther,
+                        ProjectStatus: ThisItem.ProjectStatus,
+                        ProjectStatusOther: ThisItem.ProjectStatusOther,
+                        Architecture: ThisItem.Architecture,
+                        Microcontroller: ThisItem.Microcontroller,
+                        Protocols: ThisItem.Protocols,
+                        BoschContactOwner: ThisItem.BoschContactOwner,
+                        CompletionStatus: {Value: "In Progress"},
+                        LastUpdatedOn: Now()
+                    })
+                );
+                ClearCollect(colCurrentProjects, Sort(Filter(Projects, SubmissionId.SubmissionId = gblCurrentSubmission.SubmissionId), ProjectIndex, SortOrder.Ascending));
+                Notify("Project cloned", NotificationType.Success)
+        
+        btnDelete As button:
+            Text: ="🗑"
+            X: =195
+            Y: =95
+            Width: =40
+            Height: =28
+            Fill: =RGBA(255, 82, 82, 0.15)
+            Color: =gblTheme.Error
+            Font: =Font.'Segoe UI'
+            Size: =12
+            BorderRadius: =6
+            OnSelect: |-
+                =RemoveIf(ProjectSecurityDetails, ProjectId.ProjectId = ThisItem.ProjectId);
+                Remove(Projects, ThisItem);
+                ClearCollect(colCurrentProjects, Sort(Filter(Projects, SubmissionId.SubmissionId = gblCurrentSubmission.SubmissionId), ProjectIndex, SortOrder.Ascending));
+                Notify("Project deleted", NotificationType.Information)
+    
+    // Empty state
+    lblEmpty As label:
+        X: =30
+        Y: =300
+        Width: =Parent.Width * 0.62
+        Height: =80
+        Text: ="No projects yet. Click 'Add Project' to get started."
+        Color: =gblTheme.TextMuted
+        Font: =Font.'Segoe UI'
+        Size: =16
+        Align: =Align.Center
+        Visible: =CountRows(colCurrentProjects) = 0
+    
+    // ═══════════════════════════════════════════════════════════════
+    // RIGHT COLUMN - SUMMARY
+    // ═══════════════════════════════════════════════════════════════
+    rectSummary As rectangle:
+        X: =Parent.Width * 0.64
+        Y: =95
+        Width: =Parent.Width * 0.34
+        Height: =Parent.Height - 145
+        Fill: =gblTheme.BackgroundSecondary
+        BorderRadius: =12
+    
+    lblSummaryTitle As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =115
+        Width: =200
+        Height: =28
+        Text: ="Summary"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =16
+    
+    lblMetric1 As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =160
+        Width: =Parent.Width * 0.34 - 40
+        Height: =50
+        Text: ="Projects: " & gblSubmissionMetrics.TotalProjects & " / " & gblConfig.MaxProjects
+        Color: =gblTheme.Primary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =20
+    
+    lblMetric2 As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =220
+        Width: =Parent.Width * 0.34 - 40
+        Height: =50
+        Text: ="Complete: " & gblSubmissionMetrics.CompleteProjects & " / " & gblSubmissionMetrics.TotalProjects
+        Color: =If(gblSubmissionMetrics.CompleteProjects = gblSubmissionMetrics.TotalProjects && gblSubmissionMetrics.TotalProjects > 0, gblTheme.Success, gblTheme.Warning)
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =20
+    
+    lblMetric3 As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =280
+        Width: =Parent.Width * 0.34 - 40
+        Height: =50
+        Text: ="Security Features: " & gblSubmissionMetrics.TotalFeatures
+        Color: =gblTheme.Secondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =20
+    
+    lblHelp As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =350
+        Width: =Parent.Width * 0.34 - 40
+        Height: =60
+        Text: ="ℹ Autosave is enabled. Your work is saved automatically."
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+    
+    btnAddProject As button:
+        X: =Parent.Width * 0.64 + 20
+        Y: =Parent.Height - 110
+        Width: =Parent.Width * 0.34 - 40
+        Height: =50
+        Text: ="+ Add New Project"
+        Fill: =gblTheme.Primary
+        Color: =gblTheme.TextOnPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =15
+        BorderRadius: =10
+        DisplayMode: =If(CountRows(colCurrentProjects) >= gblConfig.MaxProjects, DisplayMode.Disabled, DisplayMode.Edit)
+        OnSelect: |-
+            =If(
+                CountRows(colCurrentProjects) >= gblConfig.MaxProjects,
+                Notify("Maximum " & gblConfig.MaxProjects & " projects reached", NotificationType.Warning),
+                Set(gblCurrentProject,
+                    Patch(Projects, Defaults(Projects), {
+                        SubmissionId: gblCurrentSubmission,
+                        ProjectIndex: CountRows(colCurrentProjects) + 1,
+                        CompletionStatus: {Value: "Not Started"},
+                        MissingRequiredCount: 6,
+                        LastUpdatedOn: Now()
+                    })
+                );
+                Set(gblCurrentProjectIndex, CountRows(colCurrentProjects) + 1);
+                Navigate(scrWizardStep1, ScreenTransition.Fade)
+            )
+    
+    lblMaxNote As label:
+        X: =Parent.Width * 0.64 + 20
+        Y: =Parent.Height - 55
+        Width: =Parent.Width * 0.34 - 40
+        Height: =20
+        Text: =If(CountRows(colCurrentProjects) >= gblConfig.MaxProjects, "⚠ Max projects reached", CountRows(colCurrentProjects) & " of " & gblConfig.MaxProjects & " used")
+        Color: =If(CountRows(colCurrentProjects) >= gblConfig.MaxProjects, gblTheme.Warning, gblTheme.TextMuted)
+        Font: =Font.'Segoe UI'
+        Size: =11
+        Align: =Align.Center
+    
+    // ═══════════════════════════════════════════════════════════════
+    // TOAST NOTIFICATION
+    // ═══════════════════════════════════════════════════════════════
+    rectToast As rectangle:
+        X: =(Parent.Width - 350) / 2
+        Y: =If(gblShowToast, Parent.Height - 80, Parent.Height + 50)
+        Width: =350
+        Height: =45
+        Fill: =gblTheme.Info
+        BorderRadius: =8
+    
+    lblToast As label:
+        X: =(Parent.Width - 330) / 2
+        Y: =If(gblShowToast, Parent.Height - 72, Parent.Height + 58)
+        Width: =310
+        Height: =30
+        Text: =gblToastMessage
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Align: =Align.Center
+    
+    tmrToastHide As timer:
+        Duration: =3000
+        Repeat: =false
+        AutoStart: =gblShowToast
+        OnTimerEnd: =Set(gblShowToast, false)

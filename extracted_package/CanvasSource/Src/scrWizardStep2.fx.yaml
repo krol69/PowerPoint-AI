@@ -1,0 +1,255 @@
+scrWizardStep2 As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =Patch(Submissions, gblCurrentSubmission, { LastVisitedScreen: "scrWizardStep2", LastSavedOn: Now() });
+        Patch(Projects, gblCurrentProject, { LastVisitedStep: 2, LastUpdatedOn: Now() })
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Primary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnBack As button:
+        X: =20
+        Y: =18
+        Width: =130
+        Height: =36
+        Text: ="← Projects"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    lblStepTitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =15
+        Width: =350
+        Height: =28
+        Text: ="Project " & gblCurrentProjectIndex & " — Step 2 of 4"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+        Align: =Align.Center
+    
+    lblStepSubtitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =42
+        Width: =350
+        Height: =20
+        Text: ="Project Details"
+        Color: =gblTheme.Primary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Align: =Align.Center
+    
+    rectForm As rectangle:
+        X: =(Parent.Width - 650) / 2
+        Y: =100
+        Width: =650
+        Height: =Parent.Height - 200
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =16
+    
+    lblFormTitle As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =125
+        Width: =600
+        Height: =35
+        Text: ="Contacts & Description"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+    
+    lblBoschContact As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =175
+        Width: =280
+        Height: =22
+        Text: ="Bosch Contact / Owner *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    txtBoschContact As textInput:
+        X: =(Parent.Width - 600) / 2
+        Y: =200
+        Width: =290
+        Height: =45
+        Default: =gblCurrentProject.BoschContactOwner
+        HintText: ="Name or email..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    lblCustomerContact As label:
+        X: =(Parent.Width - 600) / 2 + 310
+        Y: =175
+        Width: =280
+        Height: =22
+        Text: ="Customer Contact"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    txtCustomerContact As textInput:
+        X: =(Parent.Width - 600) / 2 + 310
+        Y: =200
+        Width: =290
+        Height: =45
+        Default: =gblCurrentProject.CustomerContact
+        HintText: ="(Optional)"
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    lblDescription As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =265
+        Width: =280
+        Height: =22
+        Text: ="Project Description"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    txtDescription As textInput:
+        X: =(Parent.Width - 600) / 2
+        Y: =290
+        Width: =600
+        Height: =120
+        Default: =gblCurrentProject.ProjectDescription
+        HintText: ="Describe the project..."
+        Mode: =TextMode.MultiLine
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    lblSupport As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =430
+        Width: =280
+        Height: =22
+        Text: ="Support Needs / Blockers"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    txtSupport As textInput:
+        X: =(Parent.Width - 600) / 2
+        Y: =455
+        Width: =600
+        Height: =80
+        Default: =gblCurrentProject.SupportNeedsBlockers
+        HintText: ="(Optional)"
+        Mode: =TextMode.MultiLine
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    rectFooter As rectangle:
+        X: =0
+        Y: =Parent.Height - 80
+        Width: =Parent.Width
+        Height: =80
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnPrev As button:
+        X: =40
+        Y: =Parent.Height - 60
+        Width: =120
+        Height: =42
+        Text: ="← Back"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                BoschContactOwner: txtBoschContact.Text,
+                CustomerContact: txtCustomerContact.Text,
+                ProjectDescription: txtDescription.Text,
+                SupportNeedsBlockers: txtSupport.Text,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrWizardStep1, ScreenTransition.Fade)
+    
+    btnSaveExit As button:
+        X: =(Parent.Width - 140) / 2
+        Y: =Parent.Height - 60
+        Width: =140
+        Height: =42
+        Text: ="Save & Exit"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                BoschContactOwner: txtBoschContact.Text,
+                CustomerContact: txtCustomerContact.Text,
+                ProjectDescription: txtDescription.Text,
+                SupportNeedsBlockers: txtSupport.Text,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    btnNext As button:
+        X: =Parent.Width - 170
+        Y: =Parent.Height - 60
+        Width: =130
+        Height: =42
+        Text: ="Next →"
+        Fill: =gblTheme.Primary
+        Color: =gblTheme.TextOnPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+        BorderRadius: =10
+        OnSelect: |-
+            =Set(gblCurrentProject,
+                Patch(Projects, gblCurrentProject, {
+                    BoschContactOwner: txtBoschContact.Text,
+                    CustomerContact: txtCustomerContact.Text,
+                    ProjectDescription: txtDescription.Text,
+                    SupportNeedsBlockers: txtSupport.Text,
+                    LastUpdatedOn: Now(),
+                    LastVisitedStep: 3
+                })
+            );
+            Navigate(scrWizardStep3, ScreenTransition.Fade)

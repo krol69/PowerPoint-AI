@@ -1,0 +1,351 @@
+scrTickets As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =ClearCollect(colMyTickets, Sort(Filter(Tickets, Lower(CreatedByEmail) = gblUserEmail), CreatedOn, SortOrder.Descending));
+        Set(gblShowNewTicket, false)
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Info
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnHome As button:
+        X: =20
+        Y: =18
+        Width: =100
+        Height: =36
+        Text: ="← Home"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrHome, ScreenTransition.Fade)
+    
+    lblTitle As label:
+        X: =(Parent.Width - 250) / 2
+        Y: =18
+        Width: =250
+        Height: =40
+        Text: ="Help & Support"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+        Align: =Align.Center
+    
+    btnNewTicket As button:
+        X: =Parent.Width - 160
+        Y: =18
+        Width: =130
+        Height: =36
+        Text: ="+ New Ticket"
+        Fill: =gblTheme.Primary
+        Color: =gblTheme.TextOnPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =13
+        BorderRadius: =8
+        OnSelect: =Set(gblShowNewTicket, true)
+    
+    lblMyTickets As label:
+        X: =30
+        Y: =95
+        Width: =200
+        Height: =28
+        Text: ="My Tickets"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =16
+    
+    galTickets As gallery:
+        Items: =colMyTickets
+        X: =30
+        Y: =130
+        Width: =Parent.Width - 60
+        Height: =Parent.Height - 180
+        TemplateFill: =Transparent
+        TemplateSize: =80
+        TemplatePadding: =6
+        
+        rectCard As rectangle:
+            X: =0
+            Y: =0
+            Width: =Parent.TemplateWidth
+            Height: =72
+            Fill: =gblTheme.BackgroundCard
+            BorderColor: =Switch(ThisItem.Status.Value, "Open", gblTheme.Info, "Waiting on User", gblTheme.Warning, "Closed", gblTheme.TextMuted, gblTheme.Border)
+            BorderThickness: =2
+            BorderRadius: =10
+        
+        lblId As label:
+            Text: ="Ticket #" & ThisItem.TicketId
+            X: =15
+            Y: =10
+            Width: =120
+            Height: =22
+            Color: =gblTheme.Info
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Size: =13
+        
+        lblSubject As label:
+            Text: =ThisItem.Subject
+            X: =145
+            Y: =10
+            Width: =Parent.TemplateWidth - 350
+            Height: =22
+            Color: =gblTheme.TextPrimary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =13
+        
+        rectStatus As rectangle:
+            X: =Parent.TemplateWidth - 160
+            Y: =10
+            Width: =140
+            Height: =24
+            Fill: =Switch(ThisItem.Status.Value, "Open", RGBA(33, 150, 243, 0.2), "Waiting on User", RGBA(255, 193, 7, 0.2), "Closed", RGBA(110, 118, 129, 0.2), RGBA(200, 200, 200, 0.2))
+            BorderRadius: =12
+        
+        lblStatus As label:
+            Text: =ThisItem.Status.Value
+            X: =Parent.TemplateWidth - 155
+            Y: =12
+            Width: =130
+            Height: =20
+            Color: =Switch(ThisItem.Status.Value, "Open", gblTheme.Info, "Waiting on User", gblTheme.Warning, "Closed", gblTheme.TextMuted, gblTheme.TextSecondary)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =10
+            Align: =Align.Center
+        
+        lblMeta As label:
+            Text: =ThisItem.Category.Value & " • " & ThisItem.Priority.Value & " • " & Text(ThisItem.CreatedOn, "mmm dd")
+            X: =15
+            Y: =40
+            Width: =400
+            Height: =20
+            Color: =gblTheme.TextMuted
+            Font: =Font.'Segoe UI'
+            Size: =11
+        
+        btnOpen As button:
+            Text: ="Open"
+            X: =Parent.TemplateWidth - 90
+            Y: =40
+            Width: =70
+            Height: =26
+            Fill: =gblTheme.Primary
+            Color: =gblTheme.TextOnPrimary
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnSelect: |-
+                =Set(gblCurrentTicket, ThisItem);
+                Navigate(scrTicketChat, ScreenTransition.Fade)
+    
+    lblEmpty As label:
+        X: =(Parent.Width - 400) / 2
+        Y: =350
+        Width: =400
+        Height: =50
+        Text: ="No tickets. Click 'New Ticket' to get help."
+        Color: =gblTheme.TextMuted
+        Font: =Font.'Segoe UI'
+        Size: =15
+        Align: =Align.Center
+        Visible: =CountRows(colMyTickets) = 0
+    
+    // New Ticket Dialog
+    rectOverlay As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =Parent.Height
+        Fill: =RGBA(0, 0, 0, 0.8)
+        Visible: =gblShowNewTicket
+    
+    rectDialog As rectangle:
+        X: =(Parent.Width - 500) / 2
+        Y: =(Parent.Height - 450) / 2
+        Width: =500
+        Height: =450
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =16
+        Visible: =gblShowNewTicket
+    
+    lblNewTitle As label:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 25
+        Width: =450
+        Height: =35
+        Text: ="Create New Ticket"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =20
+        Align: =Align.Center
+        Visible: =gblShowNewTicket
+    
+    lblCategoryLabel As label:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 75
+        Width: =200
+        Height: =20
+        Text: ="Category *"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Visible: =gblShowNewTicket
+    
+    ddCategory As dropDown:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 95
+        Width: =220
+        Height: =42
+        Items: =Choices(Tickets.Category)
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+    
+    lblPriorityLabel As label:
+        X: =(Parent.Width - 450) / 2 + 230
+        Y: =(Parent.Height - 450) / 2 + 75
+        Width: =200
+        Height: =20
+        Text: ="Priority *"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Visible: =gblShowNewTicket
+    
+    ddPriority As dropDown:
+        X: =(Parent.Width - 450) / 2 + 230
+        Y: =(Parent.Height - 450) / 2 + 95
+        Width: =220
+        Height: =42
+        Items: =Choices(Tickets.Priority)
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+    
+    lblSubjectLabel As label:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 155
+        Width: =200
+        Height: =20
+        Text: ="Subject *"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Visible: =gblShowNewTicket
+    
+    txtSubject As textInput:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 175
+        Width: =450
+        Height: =42
+        HintText: ="Brief summary..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+    
+    lblDescLabel As label:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 235
+        Width: =200
+        Height: =20
+        Text: ="Description *"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Visible: =gblShowNewTicket
+    
+    txtDesc As textInput:
+        X: =(Parent.Width - 450) / 2
+        Y: =(Parent.Height - 450) / 2 + 255
+        Width: =450
+        Height: =100
+        Mode: =TextMode.MultiLine
+        HintText: ="Describe your issue..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+    
+    btnCancel As button:
+        X: =(Parent.Width - 300) / 2
+        Y: =(Parent.Height - 450) / 2 + 380
+        Width: =140
+        Height: =45
+        Text: ="Cancel"
+        Fill: =gblTheme.BackgroundSecondary
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+        OnSelect: |-
+            =Reset(txtSubject);
+            Reset(txtDesc);
+            Set(gblShowNewTicket, false)
+    
+    btnCreate As button:
+        X: =(Parent.Width - 300) / 2 + 160
+        Y: =(Parent.Height - 450) / 2 + 380
+        Width: =140
+        Height: =45
+        Text: ="Create"
+        Fill: =gblTheme.Primary
+        Color: =gblTheme.TextOnPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+        BorderRadius: =8
+        Visible: =gblShowNewTicket
+        OnSelect: |-
+            =If(
+                IsBlank(txtSubject.Text) || IsBlank(txtDesc.Text),
+                Notify("Fill all required fields", NotificationType.Error),
+                Set(gblCurrentTicket, Patch(Tickets, Defaults(Tickets), {
+                    CreatedByEmail: gblUserEmail,
+                    CreatedByName: gblUserName,
+                    Category: ddCategory.Selected,
+                    Priority: ddPriority.Selected,
+                    Status: {Value: "Open"},
+                    Subject: txtSubject.Text,
+                    Description: txtDesc.Text,
+                    AssignedToEmail: gblConfig.AdminEmail
+                }));
+                Reset(txtSubject);
+                Reset(txtDesc);
+                Set(gblShowNewTicket, false);
+                Navigate(scrTicketChat, ScreenTransition.Fade)
+            )
