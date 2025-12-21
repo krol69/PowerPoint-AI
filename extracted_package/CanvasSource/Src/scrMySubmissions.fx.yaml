@@ -1,0 +1,209 @@
+scrMySubmissions As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =ClearCollect(colMySubmissions, Sort(Filter(Submissions, Lower(CreatedByEmail) = gblUserEmail), CreatedOn, SortOrder.Descending));
+        Set(gblSubmissionFilter, "All")
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Primary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnHome As button:
+        X: =20
+        Y: =18
+        Width: =100
+        Height: =36
+        Text: ="← Home"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrHome, ScreenTransition.Fade)
+    
+    lblTitle As label:
+        X: =(Parent.Width - 300) / 2
+        Y: =18
+        Width: =300
+        Height: =40
+        Text: ="My Past Submissions"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+        Align: =Align.Center
+    
+    // Filter buttons
+    btnAll As button:
+        X: =30
+        Y: =90
+        Width: =80
+        Height: =35
+        Text: ="All"
+        Fill: =If(gblSubmissionFilter = "All", gblTheme.Primary, gblTheme.BackgroundCard)
+        Color: =If(gblSubmissionFilter = "All", gblTheme.TextOnPrimary, gblTheme.TextSecondary)
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Set(gblSubmissionFilter, "All")
+    
+    btnDrafts As button:
+        X: =120
+        Y: =90
+        Width: =80
+        Height: =35
+        Text: ="Drafts"
+        Fill: =If(gblSubmissionFilter = "Draft", gblTheme.Warning, gblTheme.BackgroundCard)
+        Color: =If(gblSubmissionFilter = "Draft", gblTheme.TextOnPrimary, gblTheme.TextSecondary)
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Set(gblSubmissionFilter, "Draft")
+    
+    btnSubmitted As button:
+        X: =210
+        Y: =90
+        Width: =100
+        Height: =35
+        Text: ="Submitted"
+        Fill: =If(gblSubmissionFilter = "Submitted", gblTheme.Success, gblTheme.BackgroundCard)
+        Color: =If(gblSubmissionFilter = "Submitted", gblTheme.TextOnPrimary, gblTheme.TextSecondary)
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Set(gblSubmissionFilter, "Submitted")
+    
+    galSubmissions As gallery:
+        Items: =Sort(If(gblSubmissionFilter = "All", colMySubmissions, Filter(colMySubmissions, Status.Value = gblSubmissionFilter)), CreatedOn, SortOrder.Descending)
+        X: =30
+        Y: =140
+        Width: =Parent.Width - 60
+        Height: =Parent.Height - 190
+        TemplateFill: =Transparent
+        TemplateSize: =100
+        TemplatePadding: =8
+        
+        rectCard As rectangle:
+            X: =0
+            Y: =0
+            Width: =Parent.TemplateWidth
+            Height: =90
+            Fill: =gblTheme.BackgroundCard
+            BorderColor: =Switch(ThisItem.Status.Value, "Submitted", gblTheme.Success, "Draft", gblTheme.Warning, gblTheme.Border)
+            BorderThickness: =2
+            BorderRadius: =10
+        
+        lblId As label:
+            Text: ="Submission #" & ThisItem.SubmissionId
+            X: =20
+            Y: =12
+            Width: =200
+            Height: =25
+            Color: =gblTheme.Primary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Size: =15
+        
+        rectStatus As rectangle:
+            X: =Parent.TemplateWidth - 140
+            Y: =12
+            Width: =120
+            Height: =26
+            Fill: =Switch(ThisItem.Status.Value, "Submitted", RGBA(0, 230, 118, 0.2), "Draft", RGBA(255, 193, 7, 0.2), RGBA(110, 118, 129, 0.2))
+            BorderRadius: =13
+        
+        lblStatus As label:
+            Text: =ThisItem.Status.Value
+            X: =Parent.TemplateWidth - 135
+            Y: =14
+            Width: =110
+            Height: =22
+            Color: =Switch(ThisItem.Status.Value, "Submitted", gblTheme.Success, "Draft", gblTheme.Warning, gblTheme.TextMuted)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =11
+            Align: =Align.Center
+        
+        lblMeta As label:
+            Text: =Coalesce(ThisItem.TotalProjectCount, 0) & " project(s) • Created: " & Text(ThisItem.CreatedOn, "mmm dd, yyyy")
+            X: =20
+            Y: =40
+            Width: =400
+            Height: =20
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =12
+        
+        btnView As button:
+            Text: ="View"
+            X: =Parent.TemplateWidth - 200
+            Y: =55
+            Width: =70
+            Height: =28
+            Fill: =gblTheme.Primary
+            Color: =gblTheme.TextOnPrimary
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnSelect: |-
+                =Set(gblCurrentSubmission, ThisItem);
+                ClearCollect(colCurrentProjects, Filter(Projects, SubmissionId.SubmissionId = ThisItem.SubmissionId));
+                Navigate(If(ThisItem.Status.Value = "Draft", scrProjectList, scrSubmissionReview), ScreenTransition.Fade)
+        
+        btnClone As button:
+            Text: ="Clone"
+            X: =Parent.TemplateWidth - 120
+            Y: =55
+            Width: =70
+            Height: =28
+            Fill: =gblTheme.BackgroundSecondary
+            Color: =gblTheme.TextPrimary
+            BorderColor: =gblTheme.Border
+            BorderThickness: =1
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnSelect: |-
+                =Set(gblNewSubmission, Patch(Submissions, Defaults(Submissions), {
+                    CreatedByEmail: gblUserEmail,
+                    CreatedByName: gblUserName,
+                    Status: {Value: "Draft"},
+                    LastSavedOn: Now()
+                }));
+                ForAll(Filter(Projects, SubmissionId.SubmissionId = ThisItem.SubmissionId),
+                    Patch(Projects, Defaults(Projects), {
+                        SubmissionId: gblNewSubmission,
+                        ProjectIndex: ThisRecord.ProjectIndex,
+                        ProjectName: "Copy of " & ThisRecord.ProjectName,
+                        Customer: ThisRecord.Customer,
+                        ProjectStatus: ThisRecord.ProjectStatus,
+                        CompletionStatus: {Value: "In Progress"},
+                        LastUpdatedOn: Now()
+                    })
+                );
+                Set(gblCurrentSubmission, gblNewSubmission);
+                Notify("Submission cloned", NotificationType.Success);
+                Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    lblEmpty As label:
+        X: =(Parent.Width - 400) / 2
+        Y: =350
+        Width: =400
+        Height: =50
+        Text: ="No submissions found."
+        Color: =gblTheme.TextMuted
+        Font: =Font.'Segoe UI'
+        Size: =16
+        Align: =Align.Center
+        Visible: =CountRows(galSubmissions.AllItems) = 0

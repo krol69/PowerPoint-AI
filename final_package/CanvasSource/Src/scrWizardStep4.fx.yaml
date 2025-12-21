@@ -1,0 +1,522 @@
+scrWizardStep4 As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =Patch(Submissions, gblCurrentSubmission, { LastVisitedScreen: "scrWizardStep4", LastSavedOn: Now() });
+        ClearCollect(colProjectFeatures, AddColumns(Filter(ProjectSecurityDetails, ProjectId.ProjectId = gblCurrentProject.ProjectId), "FeatureName", FeatureId.FeatureName));
+        Set(gblSelectedCount, CountRows(colProjectFeatures));
+        Set(gblMissingSpecCount, CountRows(Filter(colProjectFeatures, IsBlank(SpecVersion) || IsBlank(SpecDetails))))
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Secondary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnBack As button:
+        X: =20
+        Y: =18
+        Width: =130
+        Height: =36
+        Text: ="← Projects"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    lblStepTitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =15
+        Width: =350
+        Height: =28
+        Text: ="Project " & gblCurrentProjectIndex & " — Step 4 of 4"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+        Align: =Align.Center
+    
+    lblStepSubtitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =42
+        Width: =350
+        Height: =20
+        Text: ="Security Features"
+        Color: =gblTheme.Secondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Align: =Align.Center
+    
+    // Left Panel - Available Features
+    rectLeftPanel As rectangle:
+        X: =20
+        Y: =90
+        Width: =400
+        Height: =Parent.Height - 335
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =12
+    
+    lblAvailable As label:
+        X: =35
+        Y: =105
+        Width: =350
+        Height: =28
+        Text: ="Available Security Features"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =16
+    
+    galFeatures As gallery:
+        Items: =colSecurityFeatures
+        X: =30
+        Y: =145
+        Width: =380
+        Height: =Parent.Height - 405
+        TemplateFill: =Transparent
+        TemplateSize: =50
+        TemplatePadding: =4
+        
+        rectFeatureItem As rectangle:
+            X: =0
+            Y: =0
+            Width: =370
+            Height: =45
+            Fill: =If(!IsBlank(LookUp(colProjectFeatures, FeatureId.FeatureId = ThisItem.FeatureId)), RGBA(0, 188, 212, 0.15), gblTheme.BackgroundSecondary)
+            BorderColor: =If(!IsBlank(LookUp(colProjectFeatures, FeatureId.FeatureId = ThisItem.FeatureId)), gblTheme.Primary, gblTheme.Border)
+            BorderThickness: =1
+            BorderRadius: =8
+        
+        tglFeature As toggle:
+            X: =10
+            Y: =8
+            Width: =45
+            Height: =28
+            Default: =!IsBlank(LookUp(colProjectFeatures, FeatureId.FeatureId = ThisItem.FeatureId))
+            OnCheck: |-
+                =Patch(ProjectSecurityDetails, Defaults(ProjectSecurityDetails), {
+                    ProjectId: gblCurrentProject,
+                    FeatureId: ThisItem,
+                    ImplementationStatus: {Value: "Planned"}
+                });
+                ClearCollect(colProjectFeatures, AddColumns(Filter(ProjectSecurityDetails, ProjectId.ProjectId = gblCurrentProject.ProjectId), "FeatureName", FeatureId.FeatureName));
+                Set(gblSelectedCount, CountRows(colProjectFeatures));
+                Set(gblMissingSpecCount, CountRows(Filter(colProjectFeatures, IsBlank(SpecVersion) || IsBlank(SpecDetails))))
+            OnUncheck: |-
+                =RemoveIf(ProjectSecurityDetails, ProjectId.ProjectId = gblCurrentProject.ProjectId && FeatureId.FeatureId = ThisItem.FeatureId);
+                ClearCollect(colProjectFeatures, AddColumns(Filter(ProjectSecurityDetails, ProjectId.ProjectId = gblCurrentProject.ProjectId), "FeatureName", FeatureId.FeatureName));
+                Set(gblSelectedCount, CountRows(colProjectFeatures));
+                Set(gblMissingSpecCount, CountRows(Filter(colProjectFeatures, IsBlank(SpecVersion) || IsBlank(SpecDetails))))
+        
+        lblFeatureName As label:
+            Text: =ThisItem.FeatureName
+            X: =65
+            Y: =5
+            Width: =290
+            Height: =35
+            Color: =gblTheme.TextPrimary
+            Font: =Font.'Segoe UI'
+            Size: =12
+            VerticalAlign: =VerticalAlign.Middle
+    
+    // Right Panel - Selected Features with Specs
+    rectRightPanel As rectangle:
+        X: =440
+        Y: =90
+        Width: =Parent.Width - 460
+        Height: =Parent.Height - 335
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =12
+    
+    lblSelected As label:
+        X: =460
+        Y: =105
+        Width: =300
+        Height: =28
+        Text: ="Selected (" & gblSelectedCount & ") — Specs Required"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =16
+    
+    rectMissingBadge As rectangle:
+        X: =780
+        Y: =105
+        Width: =140
+        Height: =26
+        Fill: =If(gblMissingSpecCount > 0, RGBA(255, 82, 82, 0.15), RGBA(0, 230, 118, 0.15))
+        BorderRadius: =13
+    
+    lblMissingBadge As label:
+        X: =785
+        Y: =107
+        Width: =130
+        Height: =22
+        Text: =If(gblMissingSpecCount > 0, gblMissingSpecCount & " missing", "✓ Complete")
+        Color: =If(gblMissingSpecCount > 0, gblTheme.Error, gblTheme.Success)
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+        Align: =Align.Center
+    
+    galSelectedFeatures As gallery:
+        Items: =colProjectFeatures
+        X: =450
+        Y: =145
+        Width: =Parent.Width - 480
+        Height: =Parent.Height - 405
+        TemplateFill: =Transparent
+        TemplateSize: =150
+        TemplatePadding: =6
+        
+        rectSelectedCard As rectangle:
+            X: =0
+            Y: =0
+            Width: =Parent.TemplateWidth - 20
+            Height: =142
+            Fill: =gblTheme.BackgroundSecondary
+            BorderColor: =If(IsBlank(ThisItem.SpecVersion) || IsBlank(ThisItem.SpecDetails), gblTheme.Error, gblTheme.Success)
+            BorderThickness: =2
+            BorderRadius: =10
+        
+        lblSelectedName As label:
+            Text: =ThisItem.FeatureName
+            X: =15
+            Y: =10
+            Width: =Parent.TemplateWidth - 50
+            Height: =24
+            Color: =gblTheme.Secondary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Size: =13
+        
+        lblSpecLabel As label:
+            Text: ="Version *"
+            X: =15
+            Y: =38
+            Width: =100
+            Height: =18
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =10
+        
+        txtSpecVersion As textInput:
+            X: =15
+            Y: =56
+            Width: =150
+            Height: =35
+            Default: =ThisItem.SpecVersion
+            HintText: ="e.g., v2.1"
+            Fill: =gblTheme.BackgroundInput
+            Color: =gblTheme.TextPrimary
+            BorderColor: =If(IsBlank(Self.Text), gblTheme.Error, gblTheme.Border)
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnChange: |-
+                =Patch(ProjectSecurityDetails, ThisItem, { SpecVersion: txtSpecVersion.Text });
+                Set(gblMissingSpecCount, CountRows(Filter(colProjectFeatures, IsBlank(SpecVersion) || IsBlank(SpecDetails))))
+        
+        lblStatusLabel As label:
+            Text: ="Status"
+            X: =180
+            Y: =38
+            Width: =100
+            Height: =18
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =10
+        
+        ddImplStatus As dropDown:
+            X: =180
+            Y: =56
+            Width: =120
+            Height: =35
+            Items: =Choices(ProjectSecurityDetails.ImplementationStatus)
+            Default: =ThisItem.ImplementationStatus
+            Fill: =gblTheme.BackgroundInput
+            Color: =gblTheme.TextPrimary
+            BorderColor: =gblTheme.Border
+            Font: =Font.'Segoe UI'
+            Size: =11
+            BorderRadius: =6
+            OnChange: =Patch(ProjectSecurityDetails, ThisItem, { ImplementationStatus: ddImplStatus.Selected })
+        
+        lblDetailsLabel As label:
+            Text: ="Details *"
+            X: =15
+            Y: =96
+            Width: =100
+            Height: =18
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =10
+        
+        txtSpecDetails As textInput:
+            X: =15
+            Y: =114
+            Width: =Parent.TemplateWidth - 50
+            Height: =22
+            Default: =ThisItem.SpecDetails
+            HintText: ="Implementation details..."
+            Fill: =gblTheme.BackgroundInput
+            Color: =gblTheme.TextPrimary
+            BorderColor: =If(IsBlank(Self.Text), gblTheme.Error, gblTheme.Border)
+            Font: =Font.'Segoe UI'
+            Size: =10
+            BorderRadius: =6
+            OnChange: |-
+                =Patch(ProjectSecurityDetails, ThisItem, { SpecDetails: txtSpecDetails.Text });
+                Set(gblMissingSpecCount, CountRows(Filter(colProjectFeatures, IsBlank(SpecVersion) || IsBlank(SpecDetails))))
+    
+    lblNoFeatures As label:
+        X: =450
+        Y: =300
+        Width: =Parent.Width - 480
+        Height: =60
+        Text: ="No security features selected." & Char(10) & "Toggle features on the left."
+        Color: =gblTheme.TextMuted
+        Font: =Font.'Segoe UI'
+        Size: =14
+        Align: =Align.Center
+        Visible: =CountRows(colProjectFeatures) = 0
+    
+    // ═══════════════════════════════════════════════════════════════
+    // DOCUMENT UPLOADS SECTION (SharePoint Link-First)
+    // ═══════════════════════════════════════════════════════════════
+    rectDocsPanel As rectangle:
+        X: =20
+        Y: =Parent.Height - 240
+        Width: =Parent.Width - 40
+        Height: =130
+        Fill: =gblTheme.BackgroundSecondary
+        BorderRadius: =12
+    
+    lblDocsTitle As label:
+        X: =40
+        Y: =Parent.Height - 225
+        Width: =300
+        Height: =25
+        Text: ="📄 Project Documents (Optional)"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+    
+    btnOpenSPFolder As button:
+        X: =350
+        Y: =Parent.Height - 228
+        Width: =180
+        Height: =30
+        Text: ="🔗 Open SharePoint Folder"
+        Fill: =gblTheme.Secondary
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =11
+        BorderRadius: =6
+        OnSelect: =Launch(gblConfig.SharePointFolderURL & "/" & gblCurrentSubmission.SubmissionId & "/" & gblCurrentProject.ProjectId)
+    
+    lblDocsHint As label:
+        X: =40
+        Y: =Parent.Height - 195
+        Width: =500
+        Height: =18
+        Text: ="Upload docs to SharePoint, then register them below with name + URL"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =11
+    
+    txtDocName As textInput:
+        X: =40
+        Y: =Parent.Height - 170
+        Width: =200
+        Height: =35
+        HintText: ="Document name..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =11
+        BorderRadius: =6
+    
+    ddDocType As dropDown:
+        X: =250
+        Y: =Parent.Height - 170
+        Width: =130
+        Height: =35
+        Items: =["Specification", "Test Report", "Security Doc", "Other"]
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =11
+        BorderRadius: =6
+    
+    txtDocUrl As textInput:
+        X: =390
+        Y: =Parent.Height - 170
+        Width: =350
+        Height: =35
+        HintText: ="SharePoint URL..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =11
+        BorderRadius: =6
+    
+    btnAddDoc As button:
+        X: =750
+        Y: =Parent.Height - 170
+        Width: =90
+        Height: =35
+        Text: ="+ Add"
+        Fill: =If(IsBlank(txtDocName.Text) || IsBlank(txtDocUrl.Text), gblTheme.BackgroundCard, gblTheme.Primary)
+        Color: =If(IsBlank(txtDocName.Text) || IsBlank(txtDocUrl.Text), gblTheme.TextMuted, gblTheme.TextOnPrimary)
+        Font: =Font.'Segoe UI'
+        Size: =11
+        BorderRadius: =6
+        DisplayMode: =If(IsBlank(txtDocName.Text) || IsBlank(txtDocUrl.Text), DisplayMode.Disabled, DisplayMode.Edit)
+        OnSelect: |-
+            =Patch(ProjectAttachments, Defaults(ProjectAttachments), {
+                ProjectId: gblCurrentProject,
+                FileName: txtDocName.Text,
+                FileType: ddDocType.Selected.Value,
+                FileUrl: txtDocUrl.Text
+            });
+            Reset(txtDocName);
+            Reset(txtDocUrl);
+            Notify("Document registered", NotificationType.Success)
+    
+    galDocs As gallery:
+        Items: =Filter(ProjectAttachments, ProjectId.ProjectId = gblCurrentProject.ProjectId)
+        X: =40
+        Y: =Parent.Height - 130
+        Width: =Parent.Width - 80
+        Height: =45
+        TemplateFill: =Transparent
+        TemplateSize: =100
+        Direction: =Layout.Horizontal
+        
+        rectDocItem As rectangle:
+            X: =0
+            Y: =0
+            Width: =180
+            Height: =40
+            Fill: =gblTheme.BackgroundCard
+            BorderRadius: =6
+        
+        lblDocName As label:
+            Text: =ThisItem.FileName
+            X: =10
+            Y: =5
+            Width: =120
+            Height: =18
+            Color: =gblTheme.Primary
+            Font: =Font.'Segoe UI'
+            Size: =10
+        
+        lblDocType As label:
+            Text: =ThisItem.FileType
+            X: =10
+            Y: =23
+            Width: =80
+            Height: =14
+            Color: =gblTheme.TextMuted
+            Font: =Font.'Segoe UI'
+            Size: =9
+        
+        btnOpenDoc As button:
+            Text: ="🔗"
+            X: =135
+            Y: =8
+            Width: =35
+            Height: =24
+            Fill: =Transparent
+            Color: =gblTheme.Secondary
+            Font: =Font.'Segoe UI'
+            Size: =12
+            BorderRadius: =4
+            OnSelect: =Launch(ThisItem.FileUrl)
+    
+    // Footer
+    rectFooter As rectangle:
+        X: =0
+        Y: =Parent.Height - 70
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnPrev As button:
+        X: =40
+        Y: =Parent.Height - 55
+        Width: =120
+        Height: =40
+        Text: ="← Back"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                SelectedFeatureCount: gblSelectedCount,
+                MissingSpecCount: gblMissingSpecCount,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrWizardStep3, ScreenTransition.Fade)
+    
+    btnSaveExit As button:
+        X: =(Parent.Width - 140) / 2
+        Y: =Parent.Height - 55
+        Width: =140
+        Height: =40
+        Text: ="Save & Exit"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                SelectedFeatureCount: gblSelectedCount,
+                MissingSpecCount: gblMissingSpecCount,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    btnComplete As button:
+        X: =Parent.Width - 200
+        Y: =Parent.Height - 55
+        Width: =160
+        Height: =40
+        Text: =If(gblMissingSpecCount > 0, "Complete Specs", "Complete ✓")
+        Fill: =If(gblMissingSpecCount > 0, gblTheme.BackgroundCard, gblTheme.Success)
+        Color: =If(gblMissingSpecCount > 0, gblTheme.TextMuted, gblTheme.TextOnPrimary)
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+        BorderRadius: =10
+        DisplayMode: =If(gblMissingSpecCount > 0, DisplayMode.Disabled, DisplayMode.Edit)
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                SelectedFeatureCount: gblSelectedCount,
+                MissingSpecCount: 0,
+                CompletionStatus: {Value: "Complete"},
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrProjectList, ScreenTransition.Fade)

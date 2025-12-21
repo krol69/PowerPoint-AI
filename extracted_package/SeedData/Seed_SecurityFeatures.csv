@@ -1,0 +1,23 @@
+FeatureName,DisplayOrder,IsActive
+Secure Flashing (Customer),1,Yes
+Secure Flashing (RB),2,Yes
+Encrypted Software Updates,3,Yes
+Security Access (Customer),4,Yes
+Security Access (RB),5,Yes
+Hardware Interface Protection,6,Yes
+Boot Time Integrity Checks,7,Yes
+Encrypted Boot,8,Yes
+Runtime Manipulation Detection,9,Yes
+Secure Data Storage,10,Yes
+Secure Logging,11,Yes
+Sandboxing,12,Yes
+Hardware-based Crypto Features,13,Yes
+Secure In-Vehicle Communication,14,Yes
+Secure Offboard Communication,15,Yes
+Firewall,16,Yes
+Host-based IDS,17,Yes
+Network-based IDS,18,Yes
+Vulnerability Monitoring,19,Yes
+Security Maintenance,20,Yes
+Software Signing incl. KMS,21,Yes
+KMS Interface with OEM Infrastructure,22,Yes

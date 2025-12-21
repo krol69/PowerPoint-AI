@@ -1,0 +1,270 @@
+scrWizardStep1 As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =Patch(Submissions, gblCurrentSubmission, { LastVisitedScreen: "scrWizardStep1", LastSavedOn: Now() });
+        Patch(Projects, gblCurrentProject, { LastVisitedStep: 1, LastUpdatedOn: Now() })
+    
+    // Header
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Primary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnBack As button:
+        X: =20
+        Y: =18
+        Width: =130
+        Height: =36
+        Text: ="← Projects"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    lblStepTitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =15
+        Width: =350
+        Height: =28
+        Text: ="Project " & gblCurrentProjectIndex & " — Step 1 of 4"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+        Align: =Align.Center
+    
+    lblStepSubtitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =42
+        Width: =350
+        Height: =20
+        Text: ="Project Basics"
+        Color: =gblTheme.Primary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Align: =Align.Center
+    
+    // Form Card
+    rectForm As rectangle:
+        X: =(Parent.Width - 650) / 2
+        Y: =100
+        Width: =650
+        Height: =Parent.Height - 200
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =16
+    
+    lblFormTitle As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =125
+        Width: =600
+        Height: =35
+        Text: ="Project Identification"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+    
+    // Project Name
+    lblProjectName As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =180
+        Width: =200
+        Height: =22
+        Text: ="Project Name *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    txtProjectName As textInput:
+        X: =(Parent.Width - 600) / 2
+        Y: =205
+        Width: =600
+        Height: =45
+        Default: =gblCurrentProject.ProjectName
+        HintText: ="Enter project name..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =If(IsBlank(Self.Text), gblTheme.Error, gblTheme.Border)
+        BorderThickness: =2
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    // Customer
+    lblCustomer As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =270
+        Width: =200
+        Height: =22
+        Text: ="Customer *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    ddCustomer As dropDown:
+        X: =(Parent.Width - 600) / 2
+        Y: =295
+        Width: =290
+        Height: =45
+        Items: =Choices(Projects.Customer)
+        Default: =gblCurrentProject.Customer
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    txtCustomerOther As textInput:
+        X: =(Parent.Width - 600) / 2 + 310
+        Y: =295
+        Width: =290
+        Height: =45
+        Default: =gblCurrentProject.CustomerOther
+        HintText: ="Specify customer..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+        Visible: =ddCustomer.Selected.Value = "Other"
+    
+    // Project Status
+    lblStatus As label:
+        X: =(Parent.Width - 600) / 2
+        Y: =360
+        Width: =200
+        Height: =22
+        Text: ="Project Status *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    ddStatus As dropDown:
+        X: =(Parent.Width - 600) / 2
+        Y: =385
+        Width: =290
+        Height: =45
+        Items: =Choices(Projects.ProjectStatus)
+        Default: =gblCurrentProject.ProjectStatus
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    txtStatusOther As textInput:
+        X: =(Parent.Width - 600) / 2 + 310
+        Y: =385
+        Width: =290
+        Height: =45
+        Default: =gblCurrentProject.ProjectStatusOther
+        HintText: ="Specify status..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+        Visible: =ddStatus.Selected.Value = "Other"
+    
+    // Validation
+    rectValidation As rectangle:
+        X: =(Parent.Width - 600) / 2
+        Y: =455
+        Width: =600
+        Height: =50
+        Fill: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), RGBA(255, 82, 82, 0.1), RGBA(0, 230, 118, 0.1))
+        BorderRadius: =10
+    
+    lblValidation As label:
+        X: =(Parent.Width - 580) / 2
+        Y: =465
+        Width: =560
+        Height: =30
+        Text: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), "⚠ Complete required fields", "✓ Ready to continue")
+        Color: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.Error, gblTheme.Success)
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Align: =Align.Center
+    
+    // Footer Navigation
+    rectFooter As rectangle:
+        X: =0
+        Y: =Parent.Height - 80
+        Width: =Parent.Width
+        Height: =80
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnSaveExit As button:
+        X: =40
+        Y: =Parent.Height - 60
+        Width: =140
+        Height: =42
+        Text: ="Save & Exit"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Patch(Projects, gblCurrentProject, {
+                ProjectName: txtProjectName.Text,
+                Customer: ddCustomer.Selected,
+                CustomerOther: txtCustomerOther.Text,
+                ProjectStatus: ddStatus.Selected,
+                ProjectStatusOther: txtStatusOther.Text,
+                CompletionStatus: {Value: If(!IsBlank(txtProjectName.Text), "In Progress", "Not Started")},
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    btnNext As button:
+        X: =Parent.Width - 190
+        Y: =Parent.Height - 60
+        Width: =150
+        Height: =42
+        Text: ="Next →"
+        Fill: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.BackgroundCard, gblTheme.Primary)
+        Color: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.TextMuted, gblTheme.TextOnPrimary)
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+        BorderRadius: =10
+        OnSelect: |-
+            =If(
+                IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected),
+                Notify("Complete required fields", NotificationType.Error),
+                Set(gblCurrentProject,
+                    Patch(Projects, gblCurrentProject, {
+                        ProjectName: txtProjectName.Text,
+                        Customer: ddCustomer.Selected,
+                        CustomerOther: txtCustomerOther.Text,
+                        ProjectStatus: ddStatus.Selected,
+                        ProjectStatusOther: txtStatusOther.Text,
+                        CompletionStatus: {Value: "In Progress"},
+                        LastUpdatedOn: Now(),
+                        LastVisitedStep: 2
+                    })
+                );
+                Navigate(scrWizardStep2, ScreenTransition.Fade)
+            )

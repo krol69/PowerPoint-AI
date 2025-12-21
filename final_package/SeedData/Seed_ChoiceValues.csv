@@ -1,0 +1,41 @@
+Table,Column,Value
+Submissions,Status,Draft
+Submissions,Status,Submitted
+Submissions,Status,Returned
+Submissions,Status,Archived
+Projects,Customer,GM
+Projects,Customer,Ford
+Projects,Customer,Tesla
+Projects,Customer,Chrysler
+Projects,Customer,Other
+Projects,ProjectStatus,Acquisition
+Projects,ProjectStatus,In-Development
+Projects,ProjectStatus,In-Production
+Projects,ProjectStatus,Other
+Projects,Architecture,VIP/GB
+Projects,Architecture,SDV
+Projects,Architecture,Stellabrain
+Projects,Architecture,Not applicable
+Projects,Architecture,Other
+Projects,Microcontroller,Infineon AURIX
+Projects,Microcontroller,NXP S32
+Projects,Microcontroller,Renesas RH850
+Projects,Microcontroller,STM32
+Projects,Microcontroller,Other
+Projects,CompletionStatus,Not Started
+Projects,CompletionStatus,In Progress
+Projects,CompletionStatus,Complete
+ProjectSecurityDetails,ImplementationStatus,Full
+ProjectSecurityDetails,ImplementationStatus,Partial
+ProjectSecurityDetails,ImplementationStatus,Planned
+Tickets,Category,Data Question
+Tickets,Category,Security Feature
+Tickets,Category,Tooling
+Tickets,Category,Other
+Tickets,Priority,Low
+Tickets,Priority,Medium
+Tickets,Priority,High
+Tickets,Status,Open
+Tickets,Status,Waiting on User
+Tickets,Status,Waiting on Admin
+Tickets,Status,Closed

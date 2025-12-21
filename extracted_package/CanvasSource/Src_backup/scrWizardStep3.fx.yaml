@@ -1,0 +1,336 @@
+scrWizardStep3 As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =Patch(Submissions, gblCurrentSubmission, { LastVisitedScreen: "scrWizardStep3", LastSavedOn: Now() });
+        Patch(Projects, gblCurrentProject, { LastVisitedStep: 3, LastUpdatedOn: Now() })
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =3
+        Fill: =gblTheme.Primary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =3
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnBack As button:
+        X: =20
+        Y: =18
+        Width: =130
+        Height: =36
+        Text: ="← Projects"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    lblStepTitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =15
+        Width: =350
+        Height: =28
+        Text: ="Project " & gblCurrentProjectIndex & " — Step 3 of 4"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =18
+        Align: =Align.Center
+    
+    lblStepSubtitle As label:
+        X: =(Parent.Width - 350) / 2
+        Y: =42
+        Width: =350
+        Height: =20
+        Text: ="Technology Details"
+        Color: =gblTheme.Primary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        Align: =Align.Center
+    
+    rectForm As rectangle:
+        X: =(Parent.Width - 700) / 2
+        Y: =100
+        Width: =700
+        Height: =Parent.Height - 200
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =16
+    
+    lblFormTitle As label:
+        X: =(Parent.Width - 650) / 2
+        Y: =125
+        Width: =650
+        Height: =35
+        Text: ="Technology & Architecture"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+    
+    // Microcontroller
+    lblMicro As label:
+        X: =(Parent.Width - 650) / 2
+        Y: =175
+        Width: =200
+        Height: =22
+        Text: ="Microcontroller *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    ddMicro As dropDown:
+        X: =(Parent.Width - 650) / 2
+        Y: =200
+        Width: =315
+        Height: =45
+        Items: =Choices(Projects.Microcontroller)
+        Default: =gblCurrentProject.Microcontroller
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    txtMicroOther As textInput:
+        X: =(Parent.Width - 650) / 2 + 335
+        Y: =200
+        Width: =315
+        Height: =45
+        Default: =gblCurrentProject.MicrocontrollerOther
+        HintText: ="Specify microcontroller..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+        Visible: =ddMicro.Selected.Value = "Other"
+    
+    // Architecture
+    lblArch As label:
+        X: =(Parent.Width - 650) / 2
+        Y: =265
+        Width: =200
+        Height: =22
+        Text: ="Architecture *"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    ddArch As dropDown:
+        X: =(Parent.Width - 650) / 2
+        Y: =290
+        Width: =315
+        Height: =45
+        Items: =Choices(Projects.Architecture)
+        Default: =gblCurrentProject.Architecture
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+    
+    txtArchOther As textInput:
+        X: =(Parent.Width - 650) / 2 + 335
+        Y: =290
+        Width: =315
+        Height: =45
+        Default: =gblCurrentProject.ArchitectureOther
+        HintText: ="Specify architecture..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =14
+        BorderRadius: =10
+        Visible: =ddArch.Selected.Value = "Other"
+    
+    // Protocols
+    lblProto As label:
+        X: =(Parent.Width - 650) / 2
+        Y: =355
+        Width: =400
+        Height: =22
+        Text: ="Communication Protocols * (select all that apply)"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =14
+    
+    rectProtoBox As rectangle:
+        X: =(Parent.Width - 650) / 2
+        Y: =380
+        Width: =650
+        Height: =100
+        Fill: =gblTheme.BackgroundInput
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        BorderRadius: =10
+    
+    chkLIN As checkbox:
+        X: =(Parent.Width - 650) / 2 + 20
+        Y: =395
+        Width: =100
+        Height: =30
+        Text: ="LIN"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Default: ="LIN" in gblCurrentProject.Protocols
+    
+    chkCAN As checkbox:
+        X: =(Parent.Width - 650) / 2 + 130
+        Y: =395
+        Width: =100
+        Height: =30
+        Text: ="CAN"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Default: ="CAN" in gblCurrentProject.Protocols
+    
+    chkEthernet As checkbox:
+        X: =(Parent.Width - 650) / 2 + 240
+        Y: =395
+        Width: =120
+        Height: =30
+        Text: ="Ethernet"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Default: ="Ethernet" in gblCurrentProject.Protocols
+    
+    chkNA As checkbox:
+        X: =(Parent.Width - 650) / 2 + 370
+        Y: =395
+        Width: =150
+        Height: =30
+        Text: ="Not applicable"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Default: ="Not applicable" in gblCurrentProject.Protocols
+    
+    chkOther As checkbox:
+        X: =(Parent.Width - 650) / 2 + 20
+        Y: =435
+        Width: =100
+        Height: =30
+        Text: ="Other"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        Size: =13
+        Default: ="Other" in gblCurrentProject.Protocols
+    
+    txtProtoOther As textInput:
+        X: =(Parent.Width - 650) / 2 + 130
+        Y: =430
+        Width: =500
+        Height: =38
+        Default: =gblCurrentProject.ProtocolsOther
+        HintText: ="Specify other protocols..."
+        Fill: =gblTheme.BackgroundInput
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        Visible: =chkOther.Value
+    
+    rectFooter As rectangle:
+        X: =0
+        Y: =Parent.Height - 80
+        Width: =Parent.Width
+        Height: =80
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnPrev As button:
+        X: =40
+        Y: =Parent.Height - 60
+        Width: =120
+        Height: =42
+        Text: ="← Back"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Set(varProtocols, Concat(Filter(Table({p:"LIN",v:chkLIN.Value},{p:"CAN",v:chkCAN.Value},{p:"Ethernet",v:chkEthernet.Value},{p:"Not applicable",v:chkNA.Value},{p:"Other",v:chkOther.Value}), v=true), p, ","));
+            Patch(Projects, gblCurrentProject, {
+                Microcontroller: ddMicro.Selected,
+                MicrocontrollerOther: txtMicroOther.Text,
+                Architecture: ddArch.Selected,
+                ArchitectureOther: txtArchOther.Text,
+                Protocols: varProtocols,
+                ProtocolsOther: txtProtoOther.Text,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrWizardStep2, ScreenTransition.Fade)
+    
+    btnSaveExit As button:
+        X: =(Parent.Width - 140) / 2
+        Y: =Parent.Height - 60
+        Width: =140
+        Height: =42
+        Text: ="Save & Exit"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        BorderThickness: =1
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =10
+        OnSelect: |-
+            =Set(varProtocols, Concat(Filter(Table({p:"LIN",v:chkLIN.Value},{p:"CAN",v:chkCAN.Value},{p:"Ethernet",v:chkEthernet.Value},{p:"Not applicable",v:chkNA.Value},{p:"Other",v:chkOther.Value}), v=true), p, ","));
+            Patch(Projects, gblCurrentProject, {
+                Microcontroller: ddMicro.Selected,
+                MicrocontrollerOther: txtMicroOther.Text,
+                Architecture: ddArch.Selected,
+                ArchitectureOther: txtArchOther.Text,
+                Protocols: varProtocols,
+                ProtocolsOther: txtProtoOther.Text,
+                LastUpdatedOn: Now()
+            });
+            Navigate(scrProjectList, ScreenTransition.Fade)
+    
+    btnNext As button:
+        X: =Parent.Width - 170
+        Y: =Parent.Height - 60
+        Width: =130
+        Height: =42
+        Text: ="Next →"
+        Fill: =gblTheme.Primary
+        Color: =gblTheme.TextOnPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =14
+        BorderRadius: =10
+        OnSelect: |-
+            =Set(varProtocols, Concat(Filter(Table({p:"LIN",v:chkLIN.Value},{p:"CAN",v:chkCAN.Value},{p:"Ethernet",v:chkEthernet.Value},{p:"Not applicable",v:chkNA.Value},{p:"Other",v:chkOther.Value}), v=true), p, ","));
+            Set(gblCurrentProject,
+                Patch(Projects, gblCurrentProject, {
+                    Microcontroller: ddMicro.Selected,
+                    MicrocontrollerOther: txtMicroOther.Text,
+                    Architecture: ddArch.Selected,
+                    ArchitectureOther: txtArchOther.Text,
+                    Protocols: varProtocols,
+                    ProtocolsOther: txtProtoOther.Text,
+                    LastUpdatedOn: Now(),
+                    LastVisitedStep: 4
+                })
+            );
+            Navigate(scrWizardStep4, ScreenTransition.Fade)

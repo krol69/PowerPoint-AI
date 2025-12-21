@@ -1,0 +1,310 @@
+scrAdminDashboard As screen:
+    Fill: =gblTheme.Background
+    
+    OnVisible: |-
+        =If(!gblIsAdmin, Navigate(scrHome, ScreenTransition.Fade));
+        ClearCollect(colAllSubmissions, Sort(Submissions, CreatedOn, SortOrder.Descending));
+        Set(gblAdminFilter, "All")
+    
+    rectAccent As rectangle:
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =4
+        Fill: =gblTheme.Secondary
+    
+    rectHeader As rectangle:
+        X: =0
+        Y: =4
+        Width: =Parent.Width
+        Height: =70
+        Fill: =gblTheme.BackgroundSecondary
+    
+    btnHome As button:
+        X: =20
+        Y: =20
+        Width: =100
+        Height: =36
+        Text: ="← Home"
+        Fill: =Transparent
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        Size: =12
+        BorderRadius: =8
+        OnSelect: =Navigate(scrHome, ScreenTransition.Fade)
+    
+    lblTitle As label:
+        X: =(Parent.Width - 300) / 2
+        Y: =15
+        Width: =300
+        Height: =45
+        Text: ="⚙ Admin Dashboard"
+        Color: =gblTheme.TextPrimary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =22
+        Align: =Align.Center
+    
+    // Stats Row
+    rectStats As rectangle:
+        X: =20
+        Y: =90
+        Width: =Parent.Width - 40
+        Height: =80
+        Fill: =gblTheme.BackgroundCard
+        BorderRadius: =12
+    
+    lblStatTotal As label:
+        X: =50
+        Y: =100
+        Width: =150
+        Height: =55
+        Text: =CountRows(colAllSubmissions) & Char(10) & "Total"
+        Color: =gblTheme.Primary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =24
+    
+    lblStatDraft As label:
+        X: =220
+        Y: =100
+        Width: =150
+        Height: =55
+        Text: =CountRows(Filter(colAllSubmissions, Status.Value = "Draft")) & Char(10) & "Drafts"
+        Color: =gblTheme.Warning
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =24
+    
+    lblStatSubmitted As label:
+        X: =390
+        Y: =100
+        Width: =150
+        Height: =55
+        Text: =CountRows(Filter(colAllSubmissions, Status.Value = "Submitted")) & Char(10) & "Submitted"
+        Color: =gblTheme.Success
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =24
+    
+    lblStatProjects As label:
+        X: =560
+        Y: =100
+        Width: =150
+        Height: =55
+        Text: =CountRows(Projects) & Char(10) & "Projects"
+        Color: =gblTheme.Secondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Bold
+        Size: =24
+    
+    // Filters
+    ddFilter As dropDown:
+        X: =30
+        Y: =185
+        Width: =150
+        Height: =38
+        Items: =["All", "Draft", "Submitted", "Returned"]
+        Default: ="All"
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+        OnChange: =Set(gblAdminFilter, ddFilter.Selected.Value)
+    
+    txtSearch As textInput:
+        X: =Parent.Width - 320
+        Y: =185
+        Width: =280
+        Height: =38
+        HintText: ="Search by ID or user..."
+        Fill: =gblTheme.BackgroundCard
+        Color: =gblTheme.TextPrimary
+        BorderColor: =gblTheme.Border
+        Font: =Font.'Segoe UI'
+        Size: =13
+        BorderRadius: =8
+    
+    // Table Header
+    rectTableHeader As rectangle:
+        X: =20
+        Y: =240
+        Width: =Parent.Width - 40
+        Height: =35
+        Fill: =gblTheme.BackgroundSecondary
+        BorderRadius: =8
+    
+    lblColId As label:
+        X: =35
+        Y: =247
+        Width: =80
+        Height: =22
+        Text: ="ID"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    lblColUser As label:
+        X: =125
+        Y: =247
+        Width: =200
+        Height: =22
+        Text: ="User"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    lblColStatus As label:
+        X: =340
+        Y: =247
+        Width: =100
+        Height: =22
+        Text: ="Status"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    lblColProj As label:
+        X: =455
+        Y: =247
+        Width: =80
+        Height: =22
+        Text: ="Projects"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    lblColDate As label:
+        X: =550
+        Y: =247
+        Width: =120
+        Height: =22
+        Text: ="Date"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    lblColAction As label:
+        X: =Parent.Width - 120
+        Y: =247
+        Width: =80
+        Height: =22
+        Text: ="Action"
+        Color: =gblTheme.TextSecondary
+        Font: =Font.'Segoe UI'
+        FontWeight: =FontWeight.Semibold
+        Size: =11
+    
+    // Data Gallery
+    galSubmissions As gallery:
+        Items: =Sort(Filter(colAllSubmissions, (gblAdminFilter = "All" || Status.Value = gblAdminFilter) && (IsBlank(txtSearch.Text) || Text(SubmissionId) in txtSearch.Text || Lower(CreatedByName) in Lower(txtSearch.Text))), CreatedOn, SortOrder.Descending)
+        X: =20
+        Y: =280
+        Width: =Parent.Width - 40
+        Height: =Parent.Height - 330
+        TemplateFill: =Transparent
+        TemplateSize: =48
+        TemplatePadding: =3
+        
+        rectRow As rectangle:
+            X: =0
+            Y: =0
+            Width: =Parent.TemplateWidth
+            Height: =43
+            Fill: =gblTheme.BackgroundCard
+            BorderRadius: =6
+        
+        lblId As label:
+            Text: ="#" & ThisItem.SubmissionId
+            X: =15
+            Y: =10
+            Width: =80
+            Height: =22
+            Color: =gblTheme.Primary
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =12
+        
+        lblUser As label:
+            Text: =ThisItem.CreatedByName
+            X: =105
+            Y: =10
+            Width: =200
+            Height: =22
+            Color: =gblTheme.TextPrimary
+            Font: =Font.'Segoe UI'
+            Size: =12
+        
+        rectStatus As rectangle:
+            X: =320
+            Y: =9
+            Width: =90
+            Height: =24
+            Fill: =Switch(ThisItem.Status.Value, "Submitted", RGBA(0, 230, 118, 0.2), "Draft", RGBA(255, 193, 7, 0.2), RGBA(110, 118, 129, 0.2))
+            BorderRadius: =12
+        
+        lblStatus As label:
+            Text: =ThisItem.Status.Value
+            X: =325
+            Y: =11
+            Width: =80
+            Height: =20
+            Color: =Switch(ThisItem.Status.Value, "Submitted", gblTheme.Success, "Draft", gblTheme.Warning, gblTheme.TextMuted)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Size: =10
+            Align: =Align.Center
+        
+        lblProj As label:
+            Text: =Coalesce(ThisItem.TotalProjectCount, 0)
+            X: =435
+            Y: =10
+            Width: =80
+            Height: =22
+            Color: =gblTheme.TextPrimary
+            Font: =Font.'Segoe UI'
+            Size: =12
+            Align: =Align.Center
+        
+        lblDate As label:
+            Text: =Text(ThisItem.CreatedOn, "mmm dd, yyyy")
+            X: =530
+            Y: =10
+            Width: =120
+            Height: =22
+            Color: =gblTheme.TextSecondary
+            Font: =Font.'Segoe UI'
+            Size: =11
+        
+        btnView As button:
+            Text: ="View"
+            X: =Parent.TemplateWidth - 100
+            Y: =8
+            Width: =65
+            Height: =26
+            Fill: =gblTheme.Primary
+            Color: =gblTheme.TextOnPrimary
+            Font: =Font.'Segoe UI'
+            Size: =10
+            BorderRadius: =6
+            OnSelect: |-
+                =Set(gblCurrentSubmission, ThisItem);
+                ClearCollect(colCurrentProjects, Filter(Projects, SubmissionId.SubmissionId = ThisItem.SubmissionId));
+                Navigate(scrSubmissionReview, ScreenTransition.Fade)
+    
+    lblTip As label:
+        X: =30
+        Y: =Parent.Height - 40
+        Width: =Parent.Width - 60
+        Height: =22
+        Text: ="💡 For Power BI: Connect to Dataverse tables: Submissions, Projects, ProjectSecurityDetails"
+        Color: =gblTheme.TextMuted
+        Font: =Font.'Segoe UI'
+        Size: =11
