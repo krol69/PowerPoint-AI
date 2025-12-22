@@ -191,16 +191,37 @@ scrWizardStep1 As screen:
         Y: =455
         Width: =600
         Height: =50
-        Fill: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), RGBA(255, 82, 82, 0.1), RGBA(0, 230, 118, 0.1))
+        Fill: =If(
+            IsBlank(txtProjectName.Text) ||
+            IsBlank(ddCustomer.Selected) ||
+            (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+            (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+            RGBA(255, 82, 82, 0.1),
+            RGBA(0, 230, 118, 0.1)
+        )
         BorderRadius: =10
-    
+
     lblValidation As label:
         X: =(Parent.Width - 580) / 2
         Y: =465
         Width: =560
         Height: =30
-        Text: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), "⚠ Complete required fields", "✓ Ready to continue")
-        Color: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.Error, gblTheme.Success)
+        Text: =If(
+            IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected),
+            "⚠ Complete required fields",
+            (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+            (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+            "⚠ Fill in 'Other' field details",
+            "✓ Ready to continue"
+        )
+        Color: =If(
+            IsBlank(txtProjectName.Text) ||
+            IsBlank(ddCustomer.Selected) ||
+            (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+            (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+            gblTheme.Error,
+            gblTheme.Success
+        )
         Font: =Font.'Segoe UI'
         Size: =13
         Align: =Align.Center
@@ -244,8 +265,22 @@ scrWizardStep1 As screen:
         Width: =150
         Height: =42
         Text: ="Next →"
-        Fill: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.BackgroundCard, gblTheme.Primary)
-        Color: =If(IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected), gblTheme.TextMuted, gblTheme.TextOnPrimary)
+        Fill: =If(
+            IsBlank(txtProjectName.Text) ||
+            IsBlank(ddCustomer.Selected) ||
+            (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+            (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+            gblTheme.BackgroundCard,
+            gblTheme.Primary
+        )
+        Color: =If(
+            IsBlank(txtProjectName.Text) ||
+            IsBlank(ddCustomer.Selected) ||
+            (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+            (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+            gblTheme.TextMuted,
+            gblTheme.TextOnPrimary
+        )
         Font: =Font.'Segoe UI'
         FontWeight: =FontWeight.Bold
         Size: =14
@@ -254,6 +289,10 @@ scrWizardStep1 As screen:
             =If(
                 IsBlank(txtProjectName.Text) || IsBlank(ddCustomer.Selected),
                 Notify("Complete required fields", NotificationType.Error),
+                (ddCustomer.Selected.Value = "Other" && IsBlank(txtCustomerOther.Text)) ||
+                (ddStatus.Selected.Value = "Other" && IsBlank(txtStatusOther.Text)),
+                Notify("Fill in required 'Other' fields", NotificationType.Warning),
+                // Valid - save and continue
                 Set(gblCurrentProject,
                     Patch(Projects, gblCurrentProject, {
                         ProjectName: txtProjectName.Text,
