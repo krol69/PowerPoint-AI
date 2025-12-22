@@ -284,16 +284,65 @@ scrSubmissionReview As screen:
                 TotalSecurityFeatures: gblSubmissionMetrics.TotalFeatures
             });
             // <<CHANGE_ADMIN_EMAIL>> - Emails sent here
+            // Build comprehensive HTML email for admin
+            Set(varProjectSummaries, Concat(colCurrentProjects,
+                "<li><strong>" & ProjectName & "</strong><br/>" &
+                "Customer: " & Coalesce(Customer.Value, "N/A") &
+                If(!IsBlank(CustomerOther), " (" & CustomerOther & ")", "") & "<br/>" &
+                "Status: " & Coalesce(ProjectStatus.Value, "N/A") & "<br/>" &
+                "Architecture: " & Coalesce(Architecture.Value, "N/A") & "<br/>" &
+                "Protocols: " & Coalesce(Protocols, "N/A") & "<br/>" &
+                "Security Features: " & SelectedFeatureCount & " selected" &
+                If(MissingSpecCount > 0, " ⚠ " & MissingSpecCount & " missing specs", " ✓") &
+                "</li>", ""));
+
+            Set(varEmailBodyAdmin,
+                "<html><body style='font-family:Segoe UI,Arial,sans-serif;'>" &
+                "<h2 style='color:#00BCD4;'>New Cross-Divisional Project Submission</h2>" &
+                "<p><strong>Submitted by:</strong> " & gblUserName & " (" & gblUserEmail & ")</p>" &
+                "<p><strong>Submission ID:</strong> " & gblCurrentSubmission.SubmissionId & "</p>" &
+                "<p><strong>Submitted on:</strong> " & Text(Now(), DateTimeFormat.ShortDateTime) & "</p>" &
+                "<hr/>" &
+                "<h3>Summary</h3>" &
+                "<ul>" &
+                "<li><strong>Total Projects:</strong> " & gblSubmissionMetrics.TotalProjects & "</li>" &
+                "<li><strong>Complete Projects:</strong> " & gblSubmissionMetrics.CompleteProjects & "</li>" &
+                "<li><strong>Total Security Features:</strong> " & gblSubmissionMetrics.TotalFeatures & "</li>" &
+                "<li><strong>Missing Specs:</strong> " & If(gblSubmissionMetrics.TotalMissing = 0, "None ✓", gblSubmissionMetrics.TotalMissing & " ⚠") & "</li>" &
+                "</ul>" &
+                "<hr/>" &
+                "<h3>Project Details</h3>" &
+                "<ol>" & varProjectSummaries & "</ol>" &
+                "<hr/>" &
+                "<p style='color:#666;font-size:12px;'>View full details in the <a href='https://make.powerapps.com'>Cross-Divisional Project Database</a></p>" &
+                "</body></html>"
+            );
+
+            Set(varEmailBodyUser,
+                "<html><body style='font-family:Segoe UI,Arial,sans-serif;'>" &
+                "<h2 style='color:#00BCD4;'>Submission Confirmed</h2>" &
+                "<p>Dear " & gblUserName & ",</p>" &
+                "<p>Your submission has been successfully received and is now under review.</p>" &
+                "<p><strong>Submission ID:</strong> " & gblCurrentSubmission.SubmissionId & "</p>" &
+                "<p><strong>Total Projects:</strong> " & gblSubmissionMetrics.TotalProjects & "</p>" &
+                "<p><strong>Security Features:</strong> " & gblSubmissionMetrics.TotalFeatures & "</p>" &
+                "<p>You will be notified once your submission has been reviewed.</p>" &
+                "<p style='color:#666;font-size:12px;'>Thank you for using the Cross-Divisional Project Database.</p>" &
+                "</body></html>"
+            );
+
             Office365Outlook.SendEmailV2(
                 gblConfig.AdminEmail,
                 "[Cross-Div DB] New Submission #" & gblCurrentSubmission.SubmissionId,
-                "New submission from " & gblUserName & Char(10) & "Projects: " & gblSubmissionMetrics.TotalProjects
+                varEmailBodyAdmin
             );
             Office365Outlook.SendEmailV2(
                 gblUserEmail,
                 "[Cross-Div DB] Submission Confirmed #" & gblCurrentSubmission.SubmissionId,
-                "Your submission has been received."
+                varEmailBodyUser
             );
             Set(gblShowSubmitConfirm, false);
-            Notify("Submission complete!", NotificationType.Success);
+            Set(gblToastMessage, "Submission complete! Confirmation emails sent.");
+            Set(gblToastType, "success");
+            Set(gblShowToast, true);
             Navigate(scrHome, ScreenTransition.Fade)
