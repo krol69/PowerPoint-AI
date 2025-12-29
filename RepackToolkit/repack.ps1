@@ -30,8 +30,11 @@ param(
 # ===================================================================
 
 $ErrorActionPreference = "Stop"
-$SourceFolder = Join-Path $PSScriptRoot "..\CanvasSource"
-$OutputFolder = Join-Path $PSScriptRoot "..\CanvasApp"
+
+# Resolve to absolute paths (handles spaces correctly)
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SourceFolder = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir "..\CanvasSource"))
+$OutputFolder = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir "..\CanvasApp"))
 $OutputPath = Join-Path $OutputFolder $OutputName
 
 # ===================================================================
@@ -196,18 +199,22 @@ Write-StepHeader "Step 4: Packing Canvas Source to .msapp"
 Write-Host "  Running PAC CLI canvas pack..." -ForegroundColor Gray
 Write-Host "  This may take 30-60 seconds..." -ForegroundColor Gray
 Write-Host ""
+Write-Host "  Command: pac canvas pack --msapp `"$OutputPath`" --sources `"$SourceFolder`"" -ForegroundColor DarkGray
+Write-Host ""
 
 try {
-    $packOutput = & pac canvas pack `
-        --msapp $OutputPath `
-        --sources $SourceFolder `
-        2>&1 | Out-String
+    # Run pac with quoted paths (important for paths with spaces)
+    $packOutput = & pac canvas pack --msapp "$OutputPath" --sources "$SourceFolder" 2>&1
+
+    # Show pac output for debugging
+    if ($packOutput) {
+        Write-Host "  PAC Output:" -ForegroundColor DarkGray
+        $packOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        Write-Host ""
+    }
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Failure "PAC canvas pack failed!"
-        Write-Host ""
-        Write-Host "Output:" -ForegroundColor Yellow
-        Write-Host $packOutput
+        Write-Failure "PAC canvas pack failed! (Exit code: $LASTEXITCODE)"
         exit 1
     }
 
@@ -227,6 +234,24 @@ Write-StepHeader "Step 5: Verifying Output"
 if (-not (Test-Path $OutputPath)) {
     Write-Failure ".msapp file was not created!"
     Write-Host "  Expected: $OutputPath" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Diagnostic info:" -ForegroundColor Yellow
+    Write-Host "    Output folder exists: $(Test-Path $OutputFolder)" -ForegroundColor Gray
+    Write-Host "    Source folder exists: $(Test-Path $SourceFolder)" -ForegroundColor Gray
+
+    # Check if pac created any files in output folder
+    if (Test-Path $OutputFolder) {
+        $outputFiles = Get-ChildItem -Path $OutputFolder -ErrorAction SilentlyContinue
+        if ($outputFiles) {
+            Write-Host "    Files in output folder:" -ForegroundColor Gray
+            $outputFiles | ForEach-Object { Write-Host "      - $($_.Name)" -ForegroundColor Gray }
+        } else {
+            Write-Host "    Output folder is empty" -ForegroundColor Gray
+        }
+    }
+    Write-Host ""
+    Write-Host "  Try running pac manually to see detailed errors:" -ForegroundColor Cyan
+    Write-Host "    pac canvas pack --msapp `"$OutputPath`" --sources `"$SourceFolder`"" -ForegroundColor Cyan
     Write-Host ""
     exit 1
 }
