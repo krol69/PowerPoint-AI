@@ -1,6 +1,0 @@
-ConfigKey,ConfigValue,Description
-AdminEmail,<<CHANGE_ADMIN_EMAIL>>,Primary admin email for notifications - CHANGE THIS
-AdminEmailCC,,CC recipients for notifications (comma-separated emails)
-AdminGroupId,,Azure AD group ID for admin role detection (optional)
-AutosaveIntervalSeconds,90,Timer interval for autosave in seconds
-MaxProjectsPerSubmission,5,Maximum number of projects allowed per submission
