@@ -72,6 +72,19 @@ For verbose output:
 .\RepackToolkit\repack.ps1 -Verbose
 ```
 
+#### If you get "execution policy" or "cannot be loaded" errors:
+
+**Option A: Run with bypass (no system changes)**
+```powershell
+powershell -ExecutionPolicy Bypass -File .\RepackToolkit\repack.ps1
+```
+
+**Option B: Unblock the file first**
+```powershell
+Unblock-File -Path .\RepackToolkit\repack.ps1
+.\RepackToolkit\repack.ps1
+```
+
 ### Method 2: Batch File (Windows CMD)
 
 Open **Command Prompt** in the package root directory and run:
@@ -109,55 +122,55 @@ pac canvas pack --msapp ".\CanvasApp\CrossDivProjectDB.msapp" --sources ".\Canva
 ### Successful Run
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║   Power Apps Canvas Source Repacker                           ║
-║   Cross-Divisional Project Database                            ║
-╚════════════════════════════════════════════════════════════════╝
++------------------------------------------------------------------+
+|   Power Apps Canvas Source Repacker                              |
+|   Cross-Divisional Project Database                              |
++------------------------------------------------------------------+
 
-═══════════════════════════════════════════════════════════════
+===================================================================
  Step 1: Verifying Prerequisites
-═══════════════════════════════════════════════════════════════
+===================================================================
 
-✓ Power Platform CLI found
+[OK] Power Platform CLI found
   Version: Microsoft PowerPlatform CLI Version 1.x.x
 
-═══════════════════════════════════════════════════════════════
+===================================================================
  Step 2: Validating CanvasSource Structure
-═══════════════════════════════════════════════════════════════
+===================================================================
 
-✓ CanvasSource folder exists
+[OK] CanvasSource folder exists
   Path: C:\Package\CanvasSource
-✓ Found 11 screen files
+[OK] Found 11 screen files
 
-═══════════════════════════════════════════════════════════════
+===================================================================
  Step 3: Preparing Output Directory
-═══════════════════════════════════════════════════════════════
+===================================================================
 
-✓ CanvasApp folder exists
+[OK] CanvasApp folder exists
   Output: C:\Package\CanvasApp\CrossDivProjectDB.msapp
 
-═══════════════════════════════════════════════════════════════
+===================================================================
  Step 4: Packing Canvas Source to .msapp
-═══════════════════════════════════════════════════════════════
+===================================================================
 
   Running PAC CLI canvas pack...
   This may take 30-60 seconds...
 
-✓ Canvas pack completed successfully
+[OK] Canvas pack completed successfully
 
-═══════════════════════════════════════════════════════════════
+===================================================================
  Step 5: Verifying Output
-═══════════════════════════════════════════════════════════════
+===================================================================
 
-✓ .msapp file created successfully
+[OK] .msapp file created successfully
   File: C:\Package\CanvasApp\CrossDivProjectDB.msapp
   Size: 156.42 KB (0.15 MB)
   Modified: 2025-12-21 10:30:45
-✓ Internal structure validated (42 files)
+[OK] Internal structure validated (42 files)
 
-╔════════════════════════════════════════════════════════════════╗
-║   ✓ REPACK COMPLETED SUCCESSFULLY                              ║
-╚════════════════════════════════════════════════════════════════╝
++------------------------------------------------------------------+
+|   [OK] REPACK COMPLETED SUCCESSFULLY                             |
++------------------------------------------------------------------+
 ```
 
 The `.msapp` file will be created in the **CanvasApp** folder.
@@ -202,6 +215,34 @@ The `.msapp` file will be created in the **CanvasApp** folder.
 2. Verify `CanvasSource\Src\App.fx.yaml` exists
 3. Re-download the package if files are missing
 
+### Error: "The string is missing the terminator" or garbled characters
+
+**Cause:** File encoding mismatch - the script file contains characters that Windows PowerShell 5.1 cannot parse correctly.
+
+**Solution:**
+1. The scripts now use ASCII-only output to prevent this issue
+2. If you still see garbled text, re-clone or re-download the repository
+3. If using git, ensure `core.autocrlf` is set correctly:
+   ```cmd
+   git config core.autocrlf true
+   ```
+
+### Error: "cannot be loaded because running scripts is disabled"
+
+**Cause:** PowerShell execution policy blocks script execution
+
+**Solution:**
+Run with execution policy bypass (no permanent changes):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\RepackToolkit\repack.ps1
+```
+
+Or unblock the specific file:
+```powershell
+Unblock-File -Path .\RepackToolkit\repack.ps1
+.\RepackToolkit\repack.ps1
+```
+
 ---
 
 ## File Structure
@@ -210,24 +251,24 @@ After running the script successfully, your package should look like this:
 
 ```
 CrossDivProjectDB_Package/
-├── CanvasSource/              ← Source files (input)
-│   ├── Src/
-│   │   ├── App.fx.yaml
-│   │   ├── scrHome.fx.yaml
-│   │   ├── scrProjectList.fx.yaml
-│   │   └── ... (other screens)
-│   ├── Header.json
-│   ├── Properties.json
-│   ├── Entropy/
-│   ├── Connections/
-│   └── pkgs/
-├── CanvasApp/                 ← Output folder
-│   └── CrossDivProjectDB.msapp   ← Generated file (ready to import!)
-├── RepackToolkit/             ← This folder
-│   ├── repack.ps1
-│   ├── repack.cmd
-│   └── README_REPACK.md
-└── Docs/                      ← Documentation
++-- CanvasSource/              <-- Source files (input)
+|   +-- Src/
+|   |   +-- App.fx.yaml
+|   |   +-- scrHome.fx.yaml
+|   |   +-- scrProjectList.fx.yaml
+|   |   +-- ... (other screens)
+|   +-- Header.json
+|   +-- Properties.json
+|   +-- Entropy/
+|   +-- Connections/
+|   +-- pkgs/
++-- CanvasApp/                 <-- Output folder
+|   +-- CrossDivProjectDB.msapp   <-- Generated file (ready to import!)
++-- RepackToolkit/             <-- This folder
+|   +-- repack.ps1
+|   +-- repack.cmd
+|   +-- README_REPACK.md
++-- Docs/                      <-- Documentation
 ```
 
 ---
@@ -239,7 +280,7 @@ Once you have the `.msapp` file:
 1. **Import into Power Apps**
    - Go to https://make.powerapps.com
    - Select your environment
-   - **Apps** → **Import canvas app**
+   - **Apps** -> **Import canvas app**
    - Upload `CanvasApp\CrossDivProjectDB.msapp`
 
 2. **Follow the POST_IMPORT_CHECKLIST.md**
