@@ -5,8 +5,8 @@ CanvasApp/*.msapp
 RepackToolkit/.repack_temp/
 
 # Template .msapp files (user-provided, not tracked)
+RepackToolkit/template/*.msapp
 *.template.msapp
-template*.msapp
 
 # Archive folder (deprecated/legacy files)
 archive/

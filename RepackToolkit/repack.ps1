@@ -11,10 +11,13 @@
 
     This approach is required for PAC CLI 1.51+ which requires CanvasManifest.json.
 
+    IMPORTANT: Empty metadata files (like Connections.json with just {}) are NOT
+    copied to avoid PAC ArgumentNullException crashes. Template versions are preserved.
+
 .PARAMETER TemplateMsappPath
-    Path to a template .msapp file (required). This file provides the correct
-    unpack format including CanvasManifest.json. You can export any canvas app
-    from Power Apps Studio to use as a template.
+    Path to a template .msapp file. If not provided, looks for:
+    1. $env:REPACK_TEMPLATE_MSAPP environment variable
+    2. RepackToolkit/template/BlankApp.msapp (bundled template)
 
 .PARAMETER OutputName
     Output .msapp file name (default: CrossDivProjectDB.msapp)
@@ -25,12 +28,13 @@
 .NOTES
     Prerequisites:
     - Power Platform CLI must be installed (pac canvas pack/unpack)
-    - A template .msapp file from Power Apps
+    - A template .msapp file from Power Apps (or use bundled template)
     - Run from the package root directory (where CanvasSource folder exists)
 
 .EXAMPLE
+    .\RepackToolkit\repack.ps1
     .\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp"
-    .\RepackToolkit\repack.ps1 -TemplateMsappPath ".\template.msapp" -OutputName "MyApp.msapp"
+    .\RepackToolkit\repack.ps1 -KeepTempFolders
 #>
 
 [CmdletBinding()]
@@ -58,13 +62,16 @@ $SourceFolder = Join-Path $RepoRoot "CanvasSource"
 $OutputFolder = Join-Path $RepoRoot "CanvasApp"
 $OutputPath = Join-Path $OutputFolder $OutputName
 
+# Bundled template location
+$BundledTemplate = Join-Path $ScriptDir "template\BlankApp.msapp"
+
 # Temp folder for merge operations
-$TempRoot = Join-Path $RepoRoot "RepackToolkit\.repack_temp"
+$TempRoot = Join-Path $ScriptDir ".repack_temp"
 $TempUnpackTemplate = Join-Path $TempRoot "template_unpacked"
 $TempMerged = Join-Path $TempRoot "merged"
 
 # ===================================================================
-# FUNCTIONS
+# HELPER FUNCTIONS
 # ===================================================================
 
 function Write-StepHeader {
@@ -88,7 +95,7 @@ function Write-Failure {
 
 function Write-Warn {
     param([string]$Message)
-    Write-Host "[!] $Message" -ForegroundColor Yellow
+    Write-Host "[WARN] $Message" -ForegroundColor Yellow
 }
 
 function Write-Info {
@@ -126,43 +133,238 @@ function Remove-TempFolders {
     }
 }
 
-function Copy-FolderContents {
-    param(
-        [string]$Source,
-        [string]$Destination,
-        [string[]]$ExcludeFiles = @()
-    )
+# ===================================================================
+# JSON VALIDATION FUNCTIONS
+# ===================================================================
 
-    if (-not (Test-Path $Destination)) {
-        New-Item -Path $Destination -ItemType Directory -Force | Out-Null
+function Test-JsonFileHasContent {
+    <#
+    .SYNOPSIS
+        Tests if a JSON file has meaningful content (not just {} or [])
+    .DESCRIPTION
+        Returns $true if:
+        - File exists
+        - File is valid JSON
+        - Content is not empty object {} or empty array []
+        - For objects: has at least one property with non-null value
+    #>
+    param([string]$FilePath)
+
+    if (-not (Test-Path $FilePath)) {
+        return $false
     }
 
-    Get-ChildItem -Path $Source -Recurse | ForEach-Object {
-        $relativePath = $_.FullName.Substring($Source.Length + 1)
-        $targetPath = Join-Path $Destination $relativePath
-
-        # Check exclusions
-        $excluded = $false
-        foreach ($exclude in $ExcludeFiles) {
-            if ($relativePath -like $exclude) {
-                $excluded = $true
-                break
-            }
+    try {
+        $content = Get-Content -Path $FilePath -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            return $false
         }
 
-        if (-not $excluded) {
-            if ($_.PSIsContainer) {
-                if (-not (Test-Path $targetPath)) {
-                    New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
+        # Remove whitespace and check for empty structures
+        $trimmed = $content.Trim()
+        if ($trimmed -eq "{}" -or $trimmed -eq "[]") {
+            return $false
+        }
+
+        # Try to parse as JSON
+        $json = $content | ConvertFrom-Json -ErrorAction Stop
+
+        # Check if it's an empty object or array
+        if ($null -eq $json) {
+            return $false
+        }
+
+        # If it's an object, check if it has any properties with content
+        if ($json -is [PSCustomObject]) {
+            $props = $json.PSObject.Properties
+            if ($props.Count -eq 0) {
+                return $false
+            }
+            # Check if all properties are null/empty
+            $hasContent = $false
+            foreach ($prop in $props) {
+                if ($null -ne $prop.Value) {
+                    if ($prop.Value -is [string] -and [string]::IsNullOrWhiteSpace($prop.Value)) {
+                        continue
+                    }
+                    if ($prop.Value -is [array] -and $prop.Value.Count -eq 0) {
+                        continue
+                    }
+                    $hasContent = $true
+                    break
                 }
-            } else {
-                $targetDir = Split-Path -Parent $targetPath
-                if (-not (Test-Path $targetDir)) {
-                    New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
-                }
-                Copy-Item -Path $_.FullName -Destination $targetPath -Force
+            }
+            return $hasContent
+        }
+
+        # If it's an array, check if it has elements
+        if ($json -is [array]) {
+            return ($json.Count -gt 0)
+        }
+
+        return $true
+    } catch {
+        # If JSON parsing fails, consider it invalid/empty
+        return $false
+    }
+}
+
+function Test-FolderHasValidContent {
+    <#
+    .SYNOPSIS
+        Tests if a folder contains any JSON files with meaningful content
+    #>
+    param([string]$FolderPath)
+
+    if (-not (Test-Path $FolderPath)) {
+        return $false
+    }
+
+    $jsonFiles = Get-ChildItem -Path $FolderPath -Filter "*.json" -Recurse -ErrorAction SilentlyContinue
+    foreach ($file in $jsonFiles) {
+        if (Test-JsonFileHasContent -FilePath $file.FullName) {
+            return $true
+        }
+    }
+    return $false
+}
+
+# ===================================================================
+# PAC ERROR DETECTION
+# ===================================================================
+
+function Test-PacOutputForErrors {
+    <#
+    .SYNOPSIS
+        Checks PAC output for error indicators even if exit code is 0
+    .DESCRIPTION
+        PAC sometimes prints "completed successfully" but also shows exceptions.
+        This function detects those cases.
+    #>
+    param([string[]]$Output)
+
+    $errorPatterns = @(
+        "Exception Type:",
+        "System\.ArgumentNullException",
+        "System\.NullReferenceException",
+        "non-recoverable error",
+        "Unhandled exception",
+        "Fatal error",
+        "Error PAS"
+    )
+
+    $outputStr = $Output -join "`n"
+    foreach ($pattern in $errorPatterns) {
+        if ($outputStr -match $pattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-PacLogPath {
+    <#
+    .SYNOPSIS
+        Attempts to find the PAC CLI log file path
+    #>
+    $possiblePaths = @(
+        "$env:LOCALAPPDATA\Microsoft\PowerAppsCli\logs",
+        "$env:APPDATA\Microsoft\PowerAppsCli\logs",
+        "$env:USERPROFILE\.pac\logs"
+    )
+
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            $latestLog = Get-ChildItem -Path $path -Filter "*.log" -ErrorAction SilentlyContinue |
+                         Sort-Object LastWriteTime -Descending |
+                         Select-Object -First 1
+            if ($latestLog) {
+                return $latestLog.FullName
             }
         }
+    }
+    return $null
+}
+
+function Show-PacLogTail {
+    <#
+    .SYNOPSIS
+        Shows the last N lines of the PAC log file
+    #>
+    param([int]$Lines = 50)
+
+    $logPath = Get-PacLogPath
+    if ($logPath -and (Test-Path $logPath)) {
+        Write-Host ""
+        Write-Host "  PAC Log (last $Lines lines):" -ForegroundColor Yellow
+        Write-Host "  Path: $logPath" -ForegroundColor Gray
+        Write-Host "  ----------------------------------------" -ForegroundColor Gray
+        Get-Content -Path $logPath -Tail $Lines -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        Write-Host "  ----------------------------------------" -ForegroundColor Gray
+    } else {
+        Write-Host "  PAC log file not found." -ForegroundColor Gray
+    }
+}
+
+# ===================================================================
+# SAFE COPY FUNCTIONS
+# ===================================================================
+
+function Copy-SourceFileIfValid {
+    <#
+    .SYNOPSIS
+        Copies a source file to destination only if it has valid content
+    .DESCRIPTION
+        If source file is empty/placeholder, keeps the template version
+    #>
+    param(
+        [string]$SourcePath,
+        [string]$DestPath,
+        [string]$Description
+    )
+
+    if (-not (Test-Path $SourcePath)) {
+        Write-Warn "Source not found, keeping template: $Description"
+        return $false
+    }
+
+    if (Test-JsonFileHasContent -FilePath $SourcePath) {
+        Copy-Item -Path $SourcePath -Destination $DestPath -Force
+        Write-Success "Copied $Description"
+        return $true
+    } else {
+        Write-Warn "Source is empty/placeholder, keeping template: $Description"
+        return $false
+    }
+}
+
+function Copy-SourceFolderIfValid {
+    <#
+    .SYNOPSIS
+        Copies a source folder to destination only if it has valid content
+    .DESCRIPTION
+        If source folder has only empty JSON files, keeps the template version
+    #>
+    param(
+        [string]$SourcePath,
+        [string]$DestPath,
+        [string]$Description
+    )
+
+    if (-not (Test-Path $SourcePath)) {
+        Write-Warn "Source folder not found, keeping template: $Description"
+        return $false
+    }
+
+    if (Test-FolderHasValidContent -FolderPath $SourcePath) {
+        if (Test-Path $DestPath) { Remove-Item -Path $DestPath -Recurse -Force }
+        Copy-Item -Path $SourcePath -Destination $DestPath -Recurse -Force
+        Write-Success "Copied $Description"
+        return $true
+    } else {
+        Write-Warn "Source folder has no valid content, keeping template: $Description"
+        return $false
     }
 }
 
@@ -172,20 +374,27 @@ function Copy-FolderContents {
 
 Write-Host ""
 Write-Host "+------------------------------------------------------------------+" -ForegroundColor Magenta
-Write-Host "|   Power Apps Canvas Source Repacker (Template Baseline)          |" -ForegroundColor Magenta
+Write-Host "|   Power Apps Canvas Source Repacker (Template Baseline v3.1)     |" -ForegroundColor Magenta
 Write-Host "|   Cross-Divisional Project Database                              |" -ForegroundColor Magenta
 Write-Host "+------------------------------------------------------------------+" -ForegroundColor Magenta
 Write-Host ""
 
 # -------------------------------------------------------------------
-# Step 0: Check Template Parameter
+# Step 0: Resolve Template .msapp
 # -------------------------------------------------------------------
 
-Write-StepHeader "Step 0: Checking Template .msapp"
+Write-StepHeader "Step 0: Resolving Template .msapp"
 
-# Check environment variable fallback
+# Priority: 1) Parameter, 2) Env var, 3) Bundled template
 if ([string]::IsNullOrWhiteSpace($TemplateMsappPath)) {
     $TemplateMsappPath = $env:REPACK_TEMPLATE_MSAPP
+}
+
+if ([string]::IsNullOrWhiteSpace($TemplateMsappPath)) {
+    if (Test-Path $BundledTemplate) {
+        $TemplateMsappPath = $BundledTemplate
+        Write-Info "Using bundled template:" $BundledTemplate
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($TemplateMsappPath)) {
@@ -194,18 +403,23 @@ if ([string]::IsNullOrWhiteSpace($TemplateMsappPath)) {
     Write-Host "  The template baseline method requires a template .msapp file." -ForegroundColor Yellow
     Write-Host "  This file provides CanvasManifest.json (required by PAC CLI 1.51+)." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Usage:" -ForegroundColor Cyan
-    Write-Host "    .\repack.ps1 -TemplateMsappPath `"C:\path\to\template.msapp`"" -ForegroundColor White
+    Write-Host "  Options:" -ForegroundColor Cyan
+    Write-Host "    1. Provide via parameter:" -ForegroundColor White
+    Write-Host "       .\repack.ps1 -TemplateMsappPath `"C:\path\to\template.msapp`"" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  Or set environment variable:" -ForegroundColor Cyan
-    Write-Host "    `$env:REPACK_TEMPLATE_MSAPP = `"C:\path\to\template.msapp`"" -ForegroundColor White
+    Write-Host "    2. Set environment variable:" -ForegroundColor White
+    Write-Host "       `$env:REPACK_TEMPLATE_MSAPP = `"C:\path\to\template.msapp`"" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  How to get a template .msapp:" -ForegroundColor Cyan
-    Write-Host "    1. Create a blank canvas app in Power Apps Studio" -ForegroundColor Gray
-    Write-Host "    2. Save and export it as .msapp (File > Save As > This computer)" -ForegroundColor Gray
-    Write-Host "    3. Use that .msapp as your template" -ForegroundColor Gray
+    Write-Host "    3. Place bundled template at:" -ForegroundColor White
+    Write-Host "       $BundledTemplate" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  See REPACK_RUNBOOK.md for detailed instructions." -ForegroundColor Gray
+    Write-Host "  How to create a template .msapp:" -ForegroundColor Cyan
+    Write-Host "    1. Go to make.powerapps.com" -ForegroundColor Gray
+    Write-Host "    2. Create a blank canvas app (any layout)" -ForegroundColor Gray
+    Write-Host "    3. File > Save As > This computer" -ForegroundColor Gray
+    Write-Host "    4. Save as BlankApp.msapp" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  See TROUBLESHOOTING_REPACK.md for detailed instructions." -ForegroundColor Gray
     Write-Host ""
     exit 1
 }
@@ -215,9 +429,6 @@ $TemplateMsappPath = [System.IO.Path]::GetFullPath($TemplateMsappPath)
 
 if (-not (Test-Path $TemplateMsappPath)) {
     Write-Failure "Template .msapp not found: $TemplateMsappPath"
-    Write-Host ""
-    Write-Host "  Make sure the file exists and the path is correct." -ForegroundColor Yellow
-    Write-Host ""
     exit 1
 }
 
@@ -245,14 +456,10 @@ Write-StepHeader "Step 1: Verifying Prerequisites"
 if (-not (Test-PacCli)) {
     Write-Failure "Power Platform CLI (pac) not found!"
     Write-Host ""
-    Write-Host "Please install PAC CLI first:" -ForegroundColor Yellow
-    Write-Host "  1. Install via PowerShell:" -ForegroundColor White
-    Write-Host "     dotnet tool install --global Microsoft.PowerApps.CLI.Tool" -ForegroundColor Cyan
+    Write-Host "Please install PAC CLI:" -ForegroundColor Yellow
+    Write-Host "  dotnet tool install --global Microsoft.PowerApps.CLI.Tool" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  OR" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  2. Download installer:" -ForegroundColor White
-    Write-Host "     https://aka.ms/PowerAppsCLI" -ForegroundColor Cyan
+    Write-Host "Or download from: https://aka.ms/PowerAppsCLI" -ForegroundColor Cyan
     Write-Host ""
     exit 1
 }
@@ -299,11 +506,22 @@ if ($missingFiles.Count -gt 0) {
 }
 
 # Count screens
-$screenFiles = Get-ChildItem -Path (Join-Path $SourceFolder "Src") -Filter "*.fx.yaml" -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "App.fx.yaml" }
+$screenFiles = Get-ChildItem -Path (Join-Path $SourceFolder "Src") -Filter "*.fx.yaml" -ErrorAction SilentlyContinue |
+               Where-Object { $_.Name -ne "App.fx.yaml" }
 $screenCount = if ($screenFiles) { $screenFiles.Count } else { 0 }
 Write-Success "Found $screenCount screen files"
-if ($screenFiles) {
-    Write-Info "Screens:" ($screenFiles.Name -join ", ")
+
+# Pre-check for empty metadata files that could cause issues
+Write-Host ""
+Write-Host "  Checking source metadata files..." -ForegroundColor Gray
+
+$connectionsFile = Join-Path $SourceFolder "Connections\Connections.json"
+if (Test-Path $connectionsFile) {
+    if (Test-JsonFileHasContent -FilePath $connectionsFile) {
+        Write-Host "    Connections.json: Has content" -ForegroundColor DarkGray
+    } else {
+        Write-Warn "    Connections.json is empty - will use template version"
+    }
 }
 
 # -------------------------------------------------------------------
@@ -323,14 +541,17 @@ Write-Cmd "pac canvas unpack --msapp `"$TemplateMsappPath`" --sources `"$TempUnp
 
 try {
     $unpackOutput = & pac canvas unpack --msapp "$TemplateMsappPath" --sources "$TempUnpackTemplate" 2>&1
+    $unpackExitCode = $LASTEXITCODE
 
     if ($unpackOutput) {
         $unpackOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
     }
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Failure "Failed to unpack template .msapp (Exit code: $LASTEXITCODE)"
+    # Check for errors in output even if exit code is 0
+    if ($unpackExitCode -ne 0 -or (Test-PacOutputForErrors -Output $unpackOutput)) {
+        Write-Failure "Failed to unpack template .msapp"
         Write-Host "  The template may be corrupted or incompatible." -ForegroundColor Yellow
+        Show-PacLogTail -Lines 30
         Remove-TempFolders
         exit 1
     }
@@ -373,12 +594,17 @@ Copy-Item -Path "$TempUnpackTemplate\*" -Destination $TempMerged -Recurse -Force
 
 Write-Success "Baseline structure copied"
 
-Write-Host "  Overlaying CanvasSource content (preserving manifest)..." -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Overlaying CanvasSource content..." -ForegroundColor Gray
+Write-Host "  (Empty/placeholder files will be skipped to prevent PAC crashes)" -ForegroundColor Gray
+Write-Host ""
 
-# Overlay CanvasSource content, but DO NOT overwrite CanvasManifest.json
-# We need to copy: Src/, Header.json, Properties.json, Entropy/, Connections/, pkgs/
+# ---------------------------------------------------------------
+# CRITICAL: Only copy source files/folders that have valid content
+# Empty metadata files cause PAC ArgumentNullException crashes
+# ---------------------------------------------------------------
 
-# Copy Src folder (screens and App.fx.yaml)
+# Always copy: Src folder (screens and App.fx.yaml) - this is our actual app logic
 $srcSource = Join-Path $SourceFolder "Src"
 $srcDest = Join-Path $TempMerged "Src"
 if (Test-Path $srcSource) {
@@ -387,48 +613,34 @@ if (Test-Path $srcSource) {
     Write-Success "Copied Src/ (screens and App.fx.yaml)"
 }
 
-# Copy Header.json
+# Copy Header.json (required, should always have content)
 $headerSource = Join-Path $SourceFolder "Header.json"
 $headerDest = Join-Path $TempMerged "Header.json"
-if (Test-Path $headerSource) {
-    Copy-Item -Path $headerSource -Destination $headerDest -Force
-    Write-Success "Copied Header.json"
-}
+Copy-SourceFileIfValid -SourcePath $headerSource -DestPath $headerDest -Description "Header.json"
 
-# Copy Properties.json
+# Copy Properties.json (required, should always have content)
 $propsSource = Join-Path $SourceFolder "Properties.json"
 $propsDest = Join-Path $TempMerged "Properties.json"
-if (Test-Path $propsSource) {
-    Copy-Item -Path $propsSource -Destination $propsDest -Force
-    Write-Success "Copied Properties.json"
-}
+Copy-SourceFileIfValid -SourcePath $propsSource -DestPath $propsDest -Description "Properties.json"
 
-# Copy Entropy folder
+# Copy Entropy folder (usually has content)
 $entropySource = Join-Path $SourceFolder "Entropy"
 $entropyDest = Join-Path $TempMerged "Entropy"
-if (Test-Path $entropySource) {
-    if (Test-Path $entropyDest) { Remove-Item -Path $entropyDest -Recurse -Force }
-    Copy-Item -Path $entropySource -Destination $entropyDest -Recurse -Force
-    Write-Success "Copied Entropy/"
-}
+Copy-SourceFolderIfValid -SourcePath $entropySource -DestPath $entropyDest -Description "Entropy/"
 
-# Copy Connections folder
+# CRITICAL: Only copy Connections if it has valid content
+# Empty {} causes ArgumentNullException in PAC
 $connSource = Join-Path $SourceFolder "Connections"
 $connDest = Join-Path $TempMerged "Connections"
-if (Test-Path $connSource) {
-    if (Test-Path $connDest) { Remove-Item -Path $connDest -Recurse -Force }
-    Copy-Item -Path $connSource -Destination $connDest -Recurse -Force
-    Write-Success "Copied Connections/"
-}
+Copy-SourceFolderIfValid -SourcePath $connSource -DestPath $connDest -Description "Connections/"
 
-# Copy pkgs folder
+# Copy pkgs folder if it has content
 $pkgsSource = Join-Path $SourceFolder "pkgs"
 $pkgsDest = Join-Path $TempMerged "pkgs"
-if (Test-Path $pkgsSource) {
-    if (Test-Path $pkgsDest) { Remove-Item -Path $pkgsDest -Recurse -Force }
-    Copy-Item -Path $pkgsSource -Destination $pkgsDest -Recurse -Force
-    Write-Success "Copied pkgs/"
-}
+Copy-SourceFolderIfValid -SourcePath $pkgsSource -DestPath $pkgsDest -Description "pkgs/"
+
+# DO NOT copy CanvasManifest.json from source - always use template's version
+# This file must be compatible with the PAC CLI version
 
 # Final check: CanvasManifest.json must still exist
 $mergedManifest = Join-Path $TempMerged "CanvasManifest.json"
@@ -476,8 +688,12 @@ Write-Host ""
 Write-Cmd "pac canvas pack --msapp `"$OutputPath`" --sources `"$TempMerged`""
 Write-Host ""
 
+$packFailed = $false
+$packOutput = @()
+
 try {
     $packOutput = & pac canvas pack --msapp "$OutputPath" --sources "$TempMerged" 2>&1
+    $packExitCode = $LASTEXITCODE
 
     if ($packOutput) {
         Write-Host "  PAC Output:" -ForegroundColor DarkGray
@@ -485,18 +701,39 @@ try {
         Write-Host ""
     }
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Failure "PAC canvas pack failed! (Exit code: $LASTEXITCODE)"
+    # Check for PAC errors - exit code OR error patterns in output
+    if ($packExitCode -ne 0) {
+        Write-Failure "PAC canvas pack failed! (Exit code: $packExitCode)"
+        $packFailed = $true
+    }
 
-        # Check for common errors
+    # CRITICAL: Also check for exceptions in output even if exit code is 0
+    # PAC sometimes reports "completed successfully" but also shows exceptions
+    if (Test-PacOutputForErrors -Output $packOutput) {
+        Write-Failure "PAC canvas pack encountered an internal error!"
+        Write-Host ""
+        Write-Host "  PAC reported an exception during packing." -ForegroundColor Yellow
+        Write-Host "  The pack may have appeared to succeed but output is likely missing/corrupt." -ForegroundColor Yellow
+        $packFailed = $true
+    }
+
+    if ($packFailed) {
         $packOutputStr = $packOutput -join "`n"
+
         if ($packOutputStr -match "PAS002") {
             Write-Host ""
-            Write-Host "  Error PAS002 indicates CanvasManifest.json is still missing." -ForegroundColor Yellow
-            Write-Host "  This should not happen with template baseline method." -ForegroundColor Yellow
-            Write-Host "  Check that your template .msapp is valid." -ForegroundColor Yellow
+            Write-Host "  Error PAS002: CanvasManifest.json not found" -ForegroundColor Yellow
+            Write-Host "  This indicates the template unpacking failed or was corrupted." -ForegroundColor Yellow
         }
 
+        if ($packOutputStr -match "ArgumentNullException") {
+            Write-Host ""
+            Write-Host "  Error: ArgumentNullException" -ForegroundColor Yellow
+            Write-Host "  This usually means a metadata file (Connections, DataSources) is empty." -ForegroundColor Yellow
+            Write-Host "  The script should have skipped empty files - check the merge step output." -ForegroundColor Yellow
+        }
+
+        Show-PacLogTail -Lines 50
         if (-not $KeepTempFolders) { Remove-TempFolders }
         exit 1
     }
@@ -505,6 +742,7 @@ try {
 
 } catch {
     Write-Failure "Error during packing: $_"
+    Show-PacLogTail -Lines 50
     if (-not $KeepTempFolders) { Remove-TempFolders }
     exit 1
 }
@@ -533,6 +771,11 @@ if (-not (Test-Path $OutputPath)) {
         }
     }
 
+    Write-Host ""
+    Write-Host "  This likely means PAC crashed during packing." -ForegroundColor Yellow
+    Write-Host "  Check the PAC log for details:" -ForegroundColor Yellow
+    Show-PacLogTail -Lines 50
+
     if (-not $KeepTempFolders) { Remove-TempFolders }
     exit 1
 }
@@ -541,6 +784,7 @@ $fileInfo = Get-Item $OutputPath
 if ($fileInfo.Length -eq 0) {
     Write-Failure ".msapp file is 0 bytes (invalid)!"
     Write-Host "  This indicates a packing error." -ForegroundColor Yellow
+    Show-PacLogTail -Lines 50
     if (-not $KeepTempFolders) { Remove-TempFolders }
     exit 1
 }
@@ -562,7 +806,7 @@ try {
 
     Write-Success "Internal structure validated ($entryCount files)"
 } catch {
-    Write-Warn "Could not validate .msapp internal structure"
+    Write-Warn "Could not validate .msapp internal structure: $_"
 }
 
 # -------------------------------------------------------------------
@@ -576,6 +820,7 @@ if (-not $KeepTempFolders) {
     Write-Success "Temp folders removed"
 } else {
     Write-Warn "Temp folders kept at: $TempRoot"
+    Write-Host "  Inspect merged folder for debugging: $TempMerged" -ForegroundColor Gray
 }
 
 # ===================================================================
@@ -603,10 +848,9 @@ Write-Host "     to configure Dataverse connections and placeholders." -Foregrou
 Write-Host ""
 
 Write-Host "Documentation:" -ForegroundColor Cyan
+Write-Host "  - TROUBLESHOOTING_REPACK.md (Common issues and solutions)" -ForegroundColor Gray
 Write-Host "  - REPACK_RUNBOOK.md         (How the pipeline works)" -ForegroundColor Gray
 Write-Host "  - REPACK_QA.md              (Validation checklist)" -ForegroundColor Gray
-Write-Host "  - POST_IMPORT_CHECKLIST.md  (Setup steps)" -ForegroundColor Gray
-Write-Host "  - DATAVERSE_SCHEMA.md       (Table creation)" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "==================================================================="  -ForegroundColor Cyan

@@ -258,7 +258,8 @@ PowerPoint-AI/
 
 ## Documentation
 
-- **[REPACK_RUNBOOK.md](../REPACK_RUNBOOK.md)** - Detailed pipeline documentation, why template baseline, troubleshooting
+- **[TROUBLESHOOTING_REPACK.md](../TROUBLESHOOTING_REPACK.md)** - Common errors and solutions
+- **[REPACK_RUNBOOK.md](../REPACK_RUNBOOK.md)** - Detailed pipeline documentation
 - **[REPACK_QA.md](../REPACK_QA.md)** - Validation checklist for output
 - **[POST_IMPORT_CHECKLIST.md](../docs/POST_IMPORT_CHECKLIST.md)** - After importing to Power Apps
 - **[DATAVERSE_SCHEMA.md](../docs/DATAVERSE_SCHEMA.md)** - Required database tables
@@ -266,6 +267,14 @@ PowerPoint-AI/
 ---
 
 ## Version History
+
+- **v3.1** (2025-12-29)
+  - **Fixed:** ArgumentNullException crash when `Connections.json` is empty `{}`
+  - Added JSON content validation - empty metadata files are skipped
+  - Added PAC exception detection (catches crashes even when exit code is 0)
+  - Added automatic PAC log display on failure
+  - Added bundled template support (`RepackToolkit/template/BlankApp.msapp`)
+  - Created TROUBLESHOOTING_REPACK.md with error reference
 
 - **v3.0** (2025-12-29)
   - Implemented Template Baseline method for PAC CLI 1.51+ compatibility
