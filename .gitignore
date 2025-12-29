@@ -1,0 +1,32 @@
+# Power Apps build output
+CanvasApp/*.msapp
+
+# Archive folder (deprecated/legacy files)
+archive/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# ZIP archives (build artifacts)
+*.zip
+
+# Windows shortcuts
+*.lnk
