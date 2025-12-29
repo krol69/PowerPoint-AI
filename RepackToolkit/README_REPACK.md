@@ -4,15 +4,16 @@
 
 This toolkit converts the **CanvasSource** folder (YAML/JSON source files) into a compiled **.msapp** binary file that can be imported into Microsoft Power Apps.
 
-## Why Is This Needed?
+**Important:** This toolkit uses the **Template Baseline Method** to handle PAC CLI 1.51+ compatibility. See [REPACK_RUNBOOK.md](../REPACK_RUNBOOK.md) for detailed documentation.
 
-Power Apps import requires a **compiled .msapp file**, not raw YAML source files. The `.msapp` format is essentially a ZIP archive containing:
-- Compiled app metadata
-- Screen definitions
-- Resources and assets
-- Connection configurations
+## Why Template Baseline?
 
-The Power Platform CLI (`pac`) tool performs this compilation.
+Power Apps CLI (PAC) version 1.51+ requires `CanvasManifest.json` in the source folder. Our CanvasSource was created with an older PAC version and doesn't include this file.
+
+The Template Baseline method:
+1. Unpacks a template `.msapp` to get the correct structure (including `CanvasManifest.json`)
+2. Overlays our CanvasSource files onto the template structure
+3. Packs the merged folder to create a valid `.msapp`
 
 ---
 
@@ -40,334 +41,245 @@ winget install Microsoft.PowerAppsCLI
 
 ### 2. Verify Installation
 
-After installation, open a new PowerShell or Command Prompt window and run:
-
 ```cmd
 pac --version
 ```
 
-You should see output like:
-```
-Microsoft PowerPlatform CLI
-Version: 1.x.x
-```
+### 3. Get a Template .msapp File
 
-> **Note:** If `pac` is not recognized, restart your terminal or add it to your PATH.
+You need a template `.msapp` file from Power Apps:
+
+1. Go to [make.powerapps.com](https://make.powerapps.com)
+2. Create a **Blank canvas app** (or use any existing app)
+3. In the editor: **File** > **Save as** > **This computer**
+4. Save the `.msapp` file (e.g., `C:\Templates\BlankApp.msapp`)
 
 ---
 
-## Usage
+## Quick Start
 
-### Method 1: PowerShell Script (Recommended)
-
-Open **PowerShell** in the package root directory and run:
+### PowerShell (Recommended)
 
 ```powershell
-.\RepackToolkit\repack.ps1
+# Navigate to package root
+cd C:\path\to\PowerPoint-AI
+
+# Run with template path
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp"
 ```
 
-For verbose output:
-
-```powershell
-.\RepackToolkit\repack.ps1 -Verbose
-```
-
-#### If you get "execution policy" or "cannot be loaded" errors:
-
-**Option A: Run with bypass (no system changes)**
-```powershell
-powershell -ExecutionPolicy Bypass -File .\RepackToolkit\repack.ps1
-```
-
-**Option B: Unblock the file first**
-```powershell
-Unblock-File -Path .\RepackToolkit\repack.ps1
-.\RepackToolkit\repack.ps1
-```
-
-### Method 2: Batch File (Windows CMD)
-
-Open **Command Prompt** in the package root directory and run:
+### CMD Wrapper
 
 ```cmd
-RepackToolkit\repack.cmd
+RepackToolkit\repack.cmd "C:\Templates\BlankApp.msapp"
 ```
 
-Or simply double-click `repack.cmd` in Windows Explorer.
+### Using Environment Variable
 
-### Method 3: Manual PAC Command
+```powershell
+# Set once
+$env:REPACK_TEMPLATE_MSAPP = "C:\Templates\BlankApp.msapp"
 
-If you prefer to run the command manually:
-
-```cmd
-pac canvas pack --msapp ".\CanvasApp\CrossDivProjectDB.msapp" --sources ".\CanvasSource"
+# Then just run
+.\RepackToolkit\repack.ps1
 ```
 
 ---
 
 ## What the Script Does
 
-1. **Verifies PAC CLI** is installed and working
-2. **Validates CanvasSource** structure (checks for required files)
-3. **Creates CanvasApp** output folder if it doesn't exist
-4. **Removes old .msapp** file if present
-5. **Runs pac canvas pack** to compile the source
-6. **Verifies output** - checks file size and internal structure
-7. **Displays next steps** for importing into Power Apps
+1. **Validates template .msapp** file exists and is valid
+2. **Verifies PAC CLI** is installed and working
+3. **Validates CanvasSource** structure (checks for required files)
+4. **Unpacks template** to get baseline structure with `CanvasManifest.json`
+5. **Merges CanvasSource** onto the baseline (preserving manifest)
+6. **Packs merged folder** using `pac canvas pack`
+7. **Verifies output** - checks file exists and has content
+8. **Cleans up** temporary folders
 
 ---
 
 ## Expected Output
 
-### Successful Run
-
 ```
 +------------------------------------------------------------------+
-|   Power Apps Canvas Source Repacker                              |
+|   Power Apps Canvas Source Repacker (Template Baseline)          |
 |   Cross-Divisional Project Database                              |
 +------------------------------------------------------------------+
+
+===================================================================
+ Step 0: Checking Template .msapp
+===================================================================
+
+[OK] Template .msapp found
+  Path:  C:\Templates\BlankApp.msapp
+  Size:  45.23 KB
 
 ===================================================================
  Step 1: Verifying Prerequisites
 ===================================================================
 
 [OK] Power Platform CLI found
-  Version: Microsoft PowerPlatform CLI Version 1.x.x
+  Version:  1.34.3+g6e90a15
 
-===================================================================
- Step 2: Validating CanvasSource Structure
-===================================================================
+...
 
-[OK] CanvasSource folder exists
-  Path: C:\Package\CanvasSource
-[OK] Found 11 screen files
+[OK] Template unpacked successfully
+[OK] CanvasManifest.json found in template
 
-===================================================================
- Step 3: Preparing Output Directory
-===================================================================
+...
 
-[OK] CanvasApp folder exists
-  Output: C:\Package\CanvasApp\CrossDivProjectDB.msapp
+[OK] Copied Src/ (screens and App.fx.yaml)
+[OK] Copied Header.json
+[OK] Copied Properties.json
 
-===================================================================
- Step 4: Packing Canvas Source to .msapp
-===================================================================
-
-  Running PAC CLI canvas pack...
-  This may take 30-60 seconds...
+...
 
 [OK] Canvas pack completed successfully
 
-===================================================================
- Step 5: Verifying Output
-===================================================================
+...
 
 [OK] .msapp file created successfully
-  File: C:\Package\CanvasApp\CrossDivProjectDB.msapp
-  Size: 156.42 KB (0.15 MB)
-  Modified: 2025-12-21 10:30:45
-[OK] Internal structure validated (42 files)
+  File:  C:\path\to\CanvasApp\CrossDivProjectDB.msapp
+  Size:  156.42 KB
 
 +------------------------------------------------------------------+
 |   [OK] REPACK COMPLETED SUCCESSFULLY                             |
 +------------------------------------------------------------------+
 ```
 
-The `.msapp` file will be created in the **CanvasApp** folder.
+---
+
+## Command-Line Options
+
+### PowerShell Script
+
+```powershell
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "path\to\template.msapp"
+```
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `-TemplateMsappPath` | Yes* | Path to template .msapp file |
+| `-OutputName` | No | Custom output filename (default: CrossDivProjectDB.msapp) |
+| `-KeepTempFolders` | No | Keep temp folders for debugging |
+
+\* Can use `$env:REPACK_TEMPLATE_MSAPP` instead
+
+### Examples
+
+```powershell
+# Basic usage
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp"
+
+# Custom output name
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp" -OutputName "MyApp.msapp"
+
+# Debug mode (keep temp folders)
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp" -KeepTempFolders
+```
 
 ---
 
 ## Troubleshooting
 
-### Error: "pac is not recognized"
+### Error: Template .msapp path is required
+
+**Cause:** No template file provided
+
+**Solution:** Provide the path or set environment variable:
+```powershell
+.\RepackToolkit\repack.ps1 -TemplateMsappPath "C:\Templates\BlankApp.msapp"
+# OR
+$env:REPACK_TEMPLATE_MSAPP = "C:\Templates\BlankApp.msapp"
+```
+
+### Error: PAS002 - Can't find CanvasManifest.json
+
+**Cause:** The template .msapp is too old or corrupted
+
+**Solution:**
+1. Create a fresh template from Power Apps Studio
+2. Export a different app as template
+3. Ensure Power Apps is up to date
+
+### Error: pac is not recognized
 
 **Cause:** PAC CLI not installed or not in PATH
 
 **Solution:**
-1. Install PAC CLI (see Prerequisites above)
+1. Install PAC CLI (see Prerequisites)
 2. Restart your terminal
-3. Run `pac --version` to verify
+3. Verify with `pac --version`
 
-### Error: "CanvasSource folder not found"
-
-**Cause:** Script not run from package root directory
+### Error: ExecutionPolicy prevents script
 
 **Solution:**
-1. Open terminal in the package root (where `CanvasSource` folder is)
-2. Run the script again
-
-### Error: ".msapp file is 0 bytes"
-
-**Cause:** Packing failed silently
-
-**Solution:**
-1. Check the PAC CLI output for errors
-2. Ensure CanvasSource contains valid YAML files
-3. Verify Header.json and Properties.json are not corrupted
-4. Try running with `-Verbose` flag (PowerShell) to see detailed output
-
-### Error: "Missing: Src\App.fx.yaml"
-
-**Cause:** CanvasSource structure is incomplete
-
-**Solution:**
-1. Ensure you extracted the full package
-2. Verify `CanvasSource\Src\App.fx.yaml` exists
-3. Re-download the package if files are missing
-
-### Error: "The string is missing the terminator" or garbled characters
-
-**Cause:** File encoding mismatch - the script file contains characters that Windows PowerShell 5.1 cannot parse correctly.
-
-**Solution:**
-1. The scripts now use ASCII-only output to prevent this issue
-2. If you still see garbled text, re-clone or re-download the repository
-3. If using git, ensure `core.autocrlf` is set correctly:
-   ```cmd
-   git config core.autocrlf true
-   ```
-
-### Error: "cannot be loaded because running scripts is disabled"
-
-**Cause:** PowerShell execution policy blocks script execution
-
-**Solution:**
-Run with execution policy bypass (no permanent changes):
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\RepackToolkit\repack.ps1
+powershell -ExecutionPolicy Bypass -File .\RepackToolkit\repack.ps1 -TemplateMsappPath "..."
 ```
 
-Or unblock the specific file:
-```powershell
-Unblock-File -Path .\RepackToolkit\repack.ps1
-.\RepackToolkit\repack.ps1
-```
+### Error: .msapp file is 0 bytes
+
+**Cause:** Packing failed
+
+**Solution:**
+1. Run with `-KeepTempFolders` to inspect merged folder
+2. Check PAC output for specific errors
+3. Verify source YAML files are valid
 
 ---
 
 ## File Structure
 
-After running the script successfully, your package should look like this:
-
 ```
-CrossDivProjectDB_Package/
+PowerPoint-AI/
 +-- CanvasSource/              <-- Source files (input)
 |   +-- Src/
 |   |   +-- App.fx.yaml
-|   |   +-- scrHome.fx.yaml
-|   |   +-- scrProjectList.fx.yaml
-|   |   +-- ... (other screens)
+|   |   +-- scr*.fx.yaml       (11 screens)
 |   +-- Header.json
 |   +-- Properties.json
 |   +-- Entropy/
 |   +-- Connections/
 |   +-- pkgs/
 +-- CanvasApp/                 <-- Output folder
-|   +-- CrossDivProjectDB.msapp   <-- Generated file (ready to import!)
-+-- RepackToolkit/             <-- This folder
-|   +-- repack.ps1
-|   +-- repack.cmd
-|   +-- README_REPACK.md
-+-- Docs/                      <-- Documentation
+|   +-- CrossDivProjectDB.msapp   <-- Generated file
++-- RepackToolkit/             <-- This toolkit
+|   +-- repack.ps1             <-- Main script
+|   +-- repack.cmd             <-- CMD wrapper
+|   +-- README_REPACK.md       <-- This file
+|   +-- .repack_temp/          <-- Temp folder (auto-cleaned)
++-- REPACK_RUNBOOK.md          <-- Detailed documentation
++-- REPACK_QA.md               <-- Validation checklist
 ```
 
 ---
 
-## Next Steps After Repacking
+## Documentation
 
-Once you have the `.msapp` file:
-
-1. **Import into Power Apps**
-   - Go to https://make.powerapps.com
-   - Select your environment
-   - **Apps** -> **Import canvas app**
-   - Upload `CanvasApp\CrossDivProjectDB.msapp`
-
-2. **Follow the POST_IMPORT_CHECKLIST.md**
-   - Create Dataverse tables
-   - Configure connections
-   - Update placeholders (admin email, SharePoint URL)
-
-3. **Import Seed Data**
-   - Use the CSV files in `SeedData/` folder
-   - Import into Dataverse tables
-
----
-
-## Advanced Usage
-
-### Custom Output Name
-
-PowerShell:
-```powershell
-.\RepackToolkit\repack.ps1 -OutputName "MyCustomApp.msapp"
-```
-
-### Skip Version Check
-
-PowerShell:
-```powershell
-.\RepackToolkit\repack.ps1 -SkipVersionCheck
-```
-
-### Repack After Modifications
-
-If you modify the CanvasSource files (e.g., change placeholders, update screens):
-
-1. Make your changes in `CanvasSource/Src/` folder
-2. Run the repack script again
-3. A new `.msapp` will be generated
-4. Import the new `.msapp` into Power Apps
-
----
-
-## Technical Details
-
-### What is `pac canvas pack`?
-
-The command syntax:
-```
-pac canvas pack --msapp <OUTPUT_PATH> --sources <SOURCE_PATH>
-```
-
-- `--msapp`: Output path for the compiled .msapp file
-- `--sources`: Input path to the CanvasSource folder
-
-### .msapp File Format
-
-The `.msapp` file is a ZIP archive (you can rename to `.zip` to inspect) containing:
-- **Header.json** - App metadata
-- **Properties.json** - App properties and settings
-- **Resources/** - Images, icons, assets
-- **Controls/** - Compiled control definitions
-- **Connections/** - Data connection configurations
-- **AppCheckerResult.sarif** - App checker validation results
-
-### CanvasSource Format
-
-The unpacked source format uses:
-- **YAML** (`.fx.yaml`) for formulas and control properties
-- **JSON** for metadata and configuration
-- Readable and version-control friendly
-
----
-
-## Support
-
-For issues with:
-- **PAC CLI installation**: https://learn.microsoft.com/power-platform/developer/cli/introduction
-- **App import errors**: Check POST_IMPORT_CHECKLIST.md
-- **Dataverse setup**: See DATAVERSE_SCHEMA.md
+- **[REPACK_RUNBOOK.md](../REPACK_RUNBOOK.md)** - Detailed pipeline documentation, why template baseline, troubleshooting
+- **[REPACK_QA.md](../REPACK_QA.md)** - Validation checklist for output
+- **[POST_IMPORT_CHECKLIST.md](../docs/POST_IMPORT_CHECKLIST.md)** - After importing to Power Apps
+- **[DATAVERSE_SCHEMA.md](../docs/DATAVERSE_SCHEMA.md)** - Required database tables
 
 ---
 
 ## Version History
 
+- **v3.0** (2025-12-29)
+  - Implemented Template Baseline method for PAC CLI 1.51+ compatibility
+  - Added `-TemplateMsappPath` required parameter
+  - Added environment variable support (`REPACK_TEMPLATE_MSAPP`)
+  - Added temp folder merge process
+  - Converted CMD to thin wrapper calling PowerShell
+  - Added comprehensive diagnostics and step logging
+  - Created REPACK_RUNBOOK.md and REPACK_QA.md
+
 - **v2.1** (2025-12-21)
   - Enhanced validation and error messages
   - Added file size verification
-  - Improved step-by-step output
-  - Added both PowerShell and Batch versions
+  - Fixed PowerShell encoding issues for Windows 11
 
 - **v2.0** (2025-12-20)
   - Initial toolkit release

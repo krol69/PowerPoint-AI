@@ -1,6 +1,13 @@
 # Power Apps build output
 CanvasApp/*.msapp
 
+# Repack temp folders (created during build)
+RepackToolkit/.repack_temp/
+
+# Template .msapp files (user-provided, not tracked)
+*.template.msapp
+template*.msapp
+
 # Archive folder (deprecated/legacy files)
 archive/
 
